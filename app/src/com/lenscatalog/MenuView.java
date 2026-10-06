@@ -25,7 +25,8 @@ final class MenuView extends View {
     interface Listener { void onExit(); }
 
     static final int ST_CHECKING = 0, ST_HOME = 1, ST_FAVORITES = 2, ST_MODELS = 3,
-            ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8;
+            ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8,
+            ST_DIAG = 9;
 
     // Sony menu palette
     private static final int BLACK = 0xFF000000, WHITE = 0xFFFFFFFF, GRAY = 0xFF999999,
@@ -80,7 +81,7 @@ final class MenuView extends View {
     // row actions
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
-            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12;
+            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13;
 
     private final Paint pTitle = new Paint(), pRow = new Paint(), pSub = new Paint(),
             pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint(),
@@ -150,6 +151,21 @@ final class MenuView extends View {
             rows.add(new Row(b, n + " ", A_BRAND));
         }
         rows.add(new Row("✎ " + Text.get("manual"), "", A_MANUAL));
+        rows.add(new Row("? " + Text.get("diagnostics"), "", A_DIAG));
+        sel = 0;
+        invalidate();
+    }
+
+    /** Diagnostic screen: which Sony EXIF/correction APIs exist on this body. */
+    void showDiag() {
+        state = ST_DIAG;
+        title = Text.get("diagnostics");
+        hint = Text.get("list_hint");
+        rows.clear();
+        top = 0;
+        for (String line : sony.diagnose()) {
+            rows.add(new Row(line, "", A_NOTHING));
+        }
         sel = 0;
         invalidate();
     }
@@ -356,6 +372,7 @@ final class MenuView extends View {
         Row r = rows.get(sel);
         switch (r.action) {
             case A_FAVORITES: showFavorites(); break;
+            case A_DIAG: showDiag(); break;
             case A_LAST: {
                 Catalog.Lens l = catalog.byId(store.lastUsed());
                 if (l != null) {
@@ -430,6 +447,7 @@ final class MenuView extends View {
                 break;
             case ST_FAVORITES:
             case ST_MANUAL:
+            case ST_DIAG:
                 showHome();
                 break;
             case ST_MODELS:
