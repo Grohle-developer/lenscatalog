@@ -38,6 +38,7 @@ final class Text {
         { "confirm_hint", "OK aplica · MENU atrás", "OK applies · MENU back" },
         { "list_hint", "↑↓ elegir · OK entrar · MENU atrás", "↑↓ choose · OK enter · MENU back" },
         { "applied", "{0} · IBIS {1} · EXIF ✓", "{0} · IBIS {1} · EXIF ✓" },
+        { "applied_title", "✓ Aplicado", "✓ Applied" },
         { "sim_note", "[SIM] sin framework Sony: llamada registrada, nada aplicado", "[SIM] no Sony framework: call logged, nothing applied" },
         { "zoom_warn", "Si mueves el zoom, vuelve a aplicar.", "If you move the zoom, re-apply." },
         { "exit", "Saliendo…", "Exiting…" },
