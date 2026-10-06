@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  LensCatalog for Sony PlayMemories Camera Apps bodies (A7 II and kin).
+  Manual lens catalogue + EXIF injection + IBIS focal length, pure Java.
+  The camera runs Android 2.3.7: API 10, v1 signatures only.
+  versionName holds the next release; build.sh injects a -dev suffix and the
+  versionCode into a copy and never edits this file.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lenscatalog"
+    android:versionCode="100999"
+    android:versionName="0.1.0">
+    <uses-sdk android:minSdkVersion="10" android:targetSdkVersion="10" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <application android:label="@string/app_name" android:icon="@drawable/ic_launcher">
+        <activity android:name=".MainActivity" android:label="@string/app_name"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboard|keyboardHidden|navigation|locale"
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

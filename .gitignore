@@ -1,0 +1,11 @@
+# build output
+app/out/
+*.class
+
+# generated logo attempts (ic_launcher.png in res/ is the real source)
+assets/media-generation-*
+
+# OS / editor noise
+.DS_Store
+__pycache__/
+*.swp
