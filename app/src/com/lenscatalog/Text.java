@@ -20,6 +20,7 @@ final class Text {
         { "no_favorites", "(sin favoritos)", "(no favourites)" },
         { "last_used", "Último utilizado", "Last used" },
         { "manual", "Datos manuales", "Manual data" },
+        { "diagnostics", "Diagnóstico", "Diagnostics" },
         { "manual_brand", "Marca: Manual", "Brand: Manual" },
         { "manual_model", "Modelo: Manual", "Model: Manual" },
         { "focal", "Focal", "Focal length" },

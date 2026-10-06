@@ -5,6 +5,8 @@ import android.util.Log;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Sony's CameraEx by reflection (as Recipe Lab does). On the camera every
@@ -223,6 +225,51 @@ final class Sony {
             throws Exception {
         mod.getClass().getMethod("setLensCorrectionLevel", String.class, int.class)
                 .invoke(mod, key, level);
+    }
+
+    /** Diagnostic lines: which Sony EXIF/correction APIs exist on this body. */
+    List<String> diagnose() {
+        List<String> out = new ArrayList<String>();
+        out.add("Build.MODEL=" + android.os.Build.MODEL);
+        if (!isCamera()) {
+            out.add("SIM: no Sony framework");
+            out.add("setExifInfo: SKIPPED");
+            out.add("isSupportedExifInfo: SKIPPED");
+            return out;
+        }
+        try {
+            out.add("CameraEx.setExifInfo: "
+                    + (findMethod(cameraEx.getClass(), "setExifInfo", 1) != null
+                            ? "EXISTS" : "MISSING"));
+            Camera.Parameters p = camera.getParameters();
+            Object mod = createModifier(p);
+            Method sup = findMethod(mod.getClass(), "isSupportedExifInfo", 0);
+            if (sup == null) {
+                out.add("isSupportedExifInfo: MISSING");
+            } else {
+                out.add("isSupportedExifInfo: " + sup.invoke(mod));
+            }
+            out.add("setAntiHandBlurFocalLength: "
+                    + (findMethod(mod.getClass(), "setAntiHandBlurFocalLength", 1) != null
+                            ? "EXISTS" : "MISSING"));
+            out.add("setLensCorrection: "
+                    + (findMethod(mod.getClass(), "setLensCorrection", 1) != null
+                            ? "EXISTS" : "MISSING"));
+            out.add("setLensCorrectionLevel: "
+                    + (findMethod(mod.getClass(), "setLensCorrectionLevel", 2) != null
+                            ? "EXISTS" : "MISSING"));
+        } catch (Throwable t) {
+            out.add("ERROR: " + t.toString());
+        }
+        return out;
+    }
+
+    private static Method findMethod(Class<?> c, String name, int nParams) {
+        for (Method m : c.getMethods()) {
+            if (m.getName().equals(name) && m.getParameterTypes().length == nParams)
+                return m;
+        }
+        return null;
     }
 
     private void writeExif(Object mod, String lensName, int focal, double maxAperture,
