@@ -42,9 +42,11 @@ final class PhotoTagger {
         Result r = new Result();
         SharedPreferences p = ctx.getSharedPreferences("lenscatalog", Context.MODE_PRIVATE);
         long lastRun = p.getLong("tag_last_run", 0);
+        AppLog.i("tagger: start, lastRun=" + lastRun);
 
         List<File> photos = listPhotos();
         r.scanned = photos.size();
+        AppLog.i("tagger: scanned " + r.scanned + " photos");
         // Oldest first, so session photo counts stay chronological.
         Collections.sort(photos, new Comparator<File>() {
             public int compare(File a, File b) {
@@ -56,50 +58,69 @@ final class PhotoTagger {
         long newest = lastRun;
         for (File f : photos) {
             long mtime = f.lastModified();
-            if (mtime > newest) newest = mtime;
             if (mtime <= lastRun) continue;
             String name = f.getName().toLowerCase();
             if (!name.endsWith(".jpg") && !name.endsWith(".jpeg")) continue;
-            if (p.getBoolean("tagged_" + f.getName(), false)) {
+            String key = "tagged_" + f.getName();
+            if (p.getBoolean(key, false)) {
                 r.alreadyTagged++;
+                if (mtime > newest) newest = mtime;
                 continue;
             }
+            AppLog.i("tagger: candidate " + f.getAbsolutePath() + " mtime=" + mtime);
             LensLog.Session s = log.sessionAt(mtime);
-            if (s == null) continue; // no lens recorded for that time
+            if (s == null) {
+                AppLog.i("tagger: no session for " + f.getName());
+                // No session: don't advance lastRun past it, retry next time.
+                continue;
+            }
+            AppLog.i("tagger: session " + s.displayName + " electronic=" + s.electronic);
             boolean[] counted = new boolean[1];
             log.countPhoto(mtime, counted);
             if (s.electronic) {
                 r.skippedElectronic++;
-                p.edit().putBoolean("tagged_" + f.getName(), true).commit();
+                p.edit().putBoolean(key, true).commit();
+                if (mtime > newest) newest = mtime;
                 continue;
             }
             String err = ExifWriter.writeLensExif(f.getAbsolutePath(),
                     s.displayName, s.focal, s.aperture);
             if (err == null) {
                 r.tagged++;
-                p.edit().putBoolean("tagged_" + f.getName(), true).commit();
+                p.edit().putBoolean(key, true).commit();
+                AppLog.i("tagger: OK " + f.getName());
+                if (mtime > newest) newest = mtime;
             } else {
                 r.failed++;
-                AppLog.i("tagger: " + f.getName() + ": " + err);
+                AppLog.i("tagger: FAIL " + f.getName() + ": " + err);
+                // Don't advance lastRun: retry next time.
             }
         }
         p.edit().putLong("tag_last_run", newest).commit();
         r.millis = System.currentTimeMillis() - t0;
+        AppLog.i("tagger: done tagged=" + r.tagged + " already=" + r.alreadyTagged
+                + " failed=" + r.failed + " skippedEl=" + r.skippedElectronic
+                + " ms=" + r.millis);
         return r;
     }
 
     /** All JPEGs under the card's DCIM tree (100MSDCF and friends). */
     private List<File> listPhotos() {
         List<File> out = new ArrayList<File>();
-        // Primary: /DCIM on the external storage; Sony also uses /PRIVATE.
+        // Sony A7 II: /DCIM/100MSDCF on the card. Try several roots.
+        String ext = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
         String[] roots = {
+            ext + "/DCIM",
             "/mnt/sdcard/DCIM",
             "/sdcard/DCIM",
-            android.os.Environment.getExternalStorageDirectory() + "/DCIM",
+            "/mnt/sdcard/external_sd/DCIM",
+            "/Removable/MicroSD/DCIM",
         };
         for (String root : roots) {
             File d = new File(root);
-            if (d.isDirectory()) {
+            boolean ok = d.isDirectory();
+            AppLog.i("tagger: root " + root + " dir=" + ok);
+            if (ok) {
                 walk(d, out);
                 if (!out.isEmpty()) break;
             }

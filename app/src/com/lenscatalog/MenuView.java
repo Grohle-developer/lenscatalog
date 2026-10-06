@@ -26,7 +26,7 @@ final class MenuView extends View {
 
     static final int ST_CHECKING = 0, ST_HOME = 1, ST_FAVORITES = 2, ST_MODELS = 3,
             ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8,
-            ST_DIAG = 9;
+            ST_DIAG = 9, ST_LOG = 10;
 
     // Sony menu palette
     private static final int BLACK = 0xFF000000, WHITE = 0xFFFFFFFF, GRAY = 0xFF999999,
@@ -83,7 +83,8 @@ final class MenuView extends View {
     // row actions
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
-            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14;
+            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14,
+            A_LOG = 15, A_AUTOEXIT = 16;
 
     private final Paint pTitle = new Paint(), pRow = new Paint(), pSub = new Paint(),
             pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint(),
@@ -145,7 +146,9 @@ final class MenuView extends View {
         hint = Text.get("list_hint");
         rows.clear();
         top = 0;
-        rows.add(new Row("★ " + Text.get("favorites"),
+        // Write EXIF first (Berto 2026-10-06: most-used action).
+        rows.add(new Row(Text.get("tag_exif"), "", A_TAG));
+        rows.add(new Row("* " + Text.get("favorites"),
                 store.favorites().size() + " ", A_FAVORITES));
         String last = store.lastUsed();
         Catalog.Lens ll = last == null ? null : catalog.byId(last);
@@ -154,9 +157,12 @@ final class MenuView extends View {
             int n = catalog.modelsOf(b).size();
             rows.add(new Row(b, n + " ", A_BRAND));
         }
-        rows.add(new Row("✎ " + Text.get("manual"), "", A_MANUAL));
+        rows.add(new Row(" " + Text.get("manual"), "", A_MANUAL));
         rows.add(new Row("? " + Text.get("diagnostics"), "", A_DIAG));
-        rows.add(new Row(Text.get("tag_exif"), "", A_TAG));
+        rows.add(new Row(Text.get("view_log"), "", A_LOG));
+        String ae = Text.get("auto_exit") + ": "
+                + (store.autoExit() ? Text.get("on") : Text.get("off"));
+        rows.add(new Row(ae, "", A_AUTOEXIT));
         sel = 0;
         invalidate();
     }
@@ -175,9 +181,30 @@ final class MenuView extends View {
         invalidate();
     }
 
+    /** Show the last lines of the card log (AINTFILM.LOG). */
+    void showLog() {
+        state = ST_LOG;
+        title = Text.get("log_title");
+        hint = Text.get("list_hint");
+        rows.clear();
+        top = 0;
+        java.util.List<String> lines = AppLog.tail(40);
+        if (lines.isEmpty()) {
+            rows.add(new Row(Text.get("log_empty"), "", A_NOTHING));
+        } else {
+            for (String line : lines) {
+                // Truncate long lines for the small screen.
+                if (line.length() > 60) line = line.substring(0, 57) + "...";
+                rows.add(new Row(line, "", A_NOTHING));
+            }
+        }
+        sel = 0;
+        invalidate();
+    }
+
     private void showFavorites() {
         state = ST_FAVORITES;
-        title = "★ " + Text.get("favorites");
+        title = "* " + Text.get("favorites");
         hint = Text.get("list_hint");
         rows.clear();
         for (String id : store.favorites()) {
@@ -203,7 +230,7 @@ final class MenuView extends View {
 
     private void showManual() {
         state = ST_MANUAL;
-        title = "✎ " + Text.get("manual");
+        title = " " + Text.get("manual");
         hint = Text.get("list_hint");
         rows.clear();
         top = 0;
@@ -228,10 +255,10 @@ final class MenuView extends View {
         rows.add(new Row("✔ " + Text.get("apply"), "", A_APPLY));
         rows.add(new Row("◐ " + Text.get("lens_correction"),
                 lcEnabled ? Text.get("lc_on") : Text.get("lc_off"), A_LCTOGGLE));
-        rows.add(new Row("✎ " + Text.get("lc_adjust"), "", A_LCCORR));
+        rows.add(new Row(" " + Text.get("lc_adjust"), "", A_LCCORR));
         if (!lens.manual) {
             boolean fav = store.isFavorite(lens.id);
-            rows.add(new Row(fav ? "★ " + Text.get("in_fav") : "★ " + Text.get("add_fav"), "", A_TOGGLEFAV));
+            rows.add(new Row(fav ? "* " + Text.get("in_fav") : "* " + Text.get("add_fav"), "", A_TOGGLEFAV));
         }
         sel = 0;
         invalidate();
@@ -269,11 +296,18 @@ final class MenuView extends View {
         state = ST_TOAST;
         toastTitle = title;
         toastBody = body;
-        toastUntil = System.currentTimeMillis() + 2400;
-        invalidate();
-        handler.postDelayed(new Runnable() {
-            public void run() { listener.onExit(); }
-        }, 2400);
+        // Auto-exit is configurable (Berto 2026-10-06): if disabled, the
+        // result stays on screen until the user presses MENU.
+        if (store != null && store.autoExit()) {
+            toastUntil = System.currentTimeMillis() + 2400;
+            invalidate();
+            handler.postDelayed(new Runnable() {
+                public void run() { listener.onExit(); }
+            }, 2400);
+        } else {
+            toastUntil = 0; // no auto-dismiss
+            invalidate();
+        }
     }
 
     /** Shorten s with … so it fits maxW pixels in paint p. API 10 safe. */
@@ -296,7 +330,14 @@ final class MenuView extends View {
 
     // ------------------------------------------------------------ keys
     void onKey(int k) {
-        if (state == ST_TOAST) return; // let it finish
+        if (state == ST_TOAST) {
+            // If auto-exit is off, MENU goes back to home; otherwise let it finish.
+            if (k == Keys.MENU && store != null && !store.autoExit()) {
+                showHome();
+                return;
+            }
+            return;
+        }
         switch (k) {
             case Keys.UP: move(-1); return;
             case Keys.DOWN: move(1); return;
@@ -379,6 +420,11 @@ final class MenuView extends View {
             case A_FAVORITES: showFavorites(); break;
             case A_DIAG: showDiag(); break;
             case A_TAG: tagPhotos(); break;
+            case A_LOG: showLog(); break;
+            case A_AUTOEXIT:
+                store.setAutoExit(!store.autoExit());
+                showHome();
+                break;
             case A_LAST: {
                 Catalog.Lens l = catalog.byId(store.lastUsed());
                 if (l != null) {
@@ -454,6 +500,7 @@ final class MenuView extends View {
             case ST_FAVORITES:
             case ST_MANUAL:
             case ST_DIAG:
+            case ST_LOG:
                 showHome();
                 break;
             case ST_MODELS:
@@ -513,7 +560,7 @@ final class MenuView extends View {
         StringBuilder body = new StringBuilder();
         body.append(lens.displayName()).append('\n');
         body.append(Text.get("summary_ibis")).append(": ").append(ibis).append('\n');
-        body.append(Text.get("summary_exif")).append(": ✓").append('\n');
+        body.append(Text.get("summary_exif")).append(": [OK]").append('\n');
         body.append(Text.get("lens_correction")).append(": ")
             .append(lcEnabled ? Text.get("lc_on") : Text.get("lc_off"));
         showResult(Text.get("applied_title"), body.toString());

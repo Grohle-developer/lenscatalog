@@ -57,4 +57,26 @@ final class AppLog {
     }
 
     static void e(String msg, Throwable t) { i(msg + ": " + t); }
+
+    /** Last n lines of the log file (for the in-app viewer). */
+    static synchronized java.util.List<String> tail(int n) {
+        java.util.List<String> out = new java.util.ArrayList<String>();
+        if (file == null || !file.exists()) return out;
+        try {
+            java.io.BufferedReader r = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(new java.io.FileInputStream(file), "UTF-8"));
+            String line;
+            // Keep only the last n: simple ring buffer.
+            java.util.LinkedList<String> buf = new java.util.LinkedList<String>();
+            while ((line = r.readLine()) != null) {
+                buf.add(line);
+                if (buf.size() > n) buf.removeFirst();
+            }
+            r.close();
+            out.addAll(buf);
+        } catch (Throwable t) {
+            // ignore
+        }
+        return out;
+    }
 }
