@@ -44,6 +44,17 @@ final class PhotoTagger {
         long lastRun = p.getLong("tag_last_run", 0);
         AppLog.i("tagger: start, lastRun=" + lastRun);
 
+        // Close the current session NOW: this freezes the time windows.
+        // Photos are then matched strictly by [start, end) from the log.
+        // A fresh session with the same lens starts immediately, so the
+        // log stays continuous for photos taken after this run.
+        LensLog.Session cur = log.current();
+        if (cur != null) {
+            log.endCurrentSession(t0);
+            log.startSession(cur.id, cur.displayName, cur.focal, cur.aperture, cur.electronic);
+            AppLog.i("tagger: session breakpoint at " + t0);
+        }
+
         List<File> photos = listPhotos();
         r.scanned = photos.size();
         AppLog.i("tagger: scanned " + r.scanned + " photos");
