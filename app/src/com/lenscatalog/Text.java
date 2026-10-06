@@ -43,6 +43,22 @@ final class Text {
         { "exit", "Saliendo…", "Exiting…" },
         { "fav_added", "Añadido a favoritos", "Added to favourites" },
         { "fav_removed", "Quitado de favoritos", "Removed from favourites" },
+        { "lens_correction", "Corrección de lente", "Lens correction" },
+        { "lc_adjust", "Ajustar corrección", "Adjust correction" },
+        { "lc_reset", "↺ Restablecer valores", "↺ Reset values" },
+        { "lc_on", "ON", "ON" },
+        { "lc_off", "OFF", "OFF" },
+        { "lc_applied", "LC ✓", "LC ✓" },
+        { "lc_hint", "↑↓ elegir · ◀ ▶ ajustar · MENU atrás", "↑↓ choose · ◀ ▶ adjust · MENU back" },
+        { "lc_shading_w", "Viñeteo · brillo", "Shading · brightness" },
+        { "lc_shading_wm", "Viñeteo · brillo medio", "Shading · mid brightness" },
+        { "lc_shading_cr", "Viñeteo · rojo", "Shading · red" },
+        { "lc_shading_cb", "Viñeteo · azul", "Shading · blue" },
+        { "lc_shading_cm", "Viñeteo · color medio", "Shading · mid color" },
+        { "lc_chroma_r", "Aberr. crom. · rojo", "Chr. aberr. · red" },
+        { "lc_chroma_b", "Aberr. crom. · azul", "Chr. aberr. · blue" },
+        { "lc_dist", "Distorsión", "Distortion" },
+        { "lc_dist_m", "Distorsión · media", "Distortion · mid" },
     };
 
     private static boolean es() {

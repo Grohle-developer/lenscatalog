@@ -22,6 +22,13 @@ correct metadata. Pure Java, no JNI. ~56 KB APK, v1-signed.
 - **Manual entry** for lenses not in the catalog (focal picker 4–1000 mm +
   optional max aperture; full custom naming by editing the JSON on a PC).
 - **Favorites** and **last used** for one-tap re-apply in the field.
+- **Manual lens correction** (v0.2.0): per-lens profiles for peripheral
+  shading (brightness/red/blue, whole + mid zone), lateral chromatic
+  aberration (red/blue) and distortion — the same model as Sony's own
+  *Lens Compensation* PlayMemories app. Toggle it on the confirm screen,
+  tune the 9 values in the built-in editor, and the app writes them via
+  `setLensCorrection` / `setLensCorrectionLevel` when you apply the lens.
+  Stored per lens on the camera; ranges are queried live from the framework.
 - Fully navigable **without touch** (D-pad / center / menu keys), in the visual
   language of Sony's native menus.
 - Bring your own catalog: drop a `lenses.json` in `/DCIM/LENSES/` on the memory

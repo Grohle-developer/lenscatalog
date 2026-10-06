@@ -17,6 +17,7 @@ import java.util.List;
  *
  * Screens: CHECKING -> HOME -> FAVORITES | MODELS -> CONFIRM -> TOAST
  * (auto-exit); MANUAL (form); ELENS (electronic lens: nothing to do).
+ * LCCORR (lens-correction editor, from CONFIRM).
  * Zooms go straight to CONFIRM with the wide end: no manual focal step
  * (Berto 2026-10-06).
  */
@@ -24,7 +25,7 @@ final class MenuView extends View {
     interface Listener { void onExit(); }
 
     static final int ST_CHECKING = 0, ST_HOME = 1, ST_FAVORITES = 2, ST_MODELS = 3,
-            ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7;
+            ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8;
 
     // Sony menu palette
     private static final int BLACK = 0xFF000000, WHITE = 0xFFFFFFFF, GRAY = 0xFF999999,
@@ -61,6 +62,15 @@ final class MenuView extends View {
     private static final String[] APS =
         { "—", "1.0", "1.2", "1.4", "1.7", "1.8", "2", "2.8", "3.5", "4", "5.6", "8", "11", "16", "22" };
 
+    // lens-correction working copy for the lens being confirmed
+    private boolean lcEnabled;
+    private int[] lcLevels = new int[Store.LC_N];
+    private int[][] lcRanges;
+    private static final String[] LC_LABELS = {
+        "lc_shading_w", "lc_shading_wm", "lc_shading_cr", "lc_shading_cb", "lc_shading_cm",
+        "lc_chroma_r", "lc_chroma_b", "lc_dist", "lc_dist_m",
+    };
+
     private static final class Row {
         final String label, sub;
         final int action;
@@ -69,7 +79,8 @@ final class MenuView extends View {
 
     // row actions
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
-            A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9;
+            A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
+            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12;
 
     private final Paint pTitle = new Paint(), pRow = new Paint(), pSub = new Paint(),
             pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint();
@@ -183,16 +194,49 @@ final class MenuView extends View {
     private void showConfirm(Catalog.Lens lens, int focal) {
         this.lens = lens;
         this.chosenFocal = focal;
+        lcEnabled = store.lensCorrectionEnabled(lens.id);
+        lcLevels = store.lensCorrectionLevels(lens.id);
+        lcRanges = null; // queried lazily when the editor opens
         state = ST_CONFIRM;
         title = lens.displayName();
         hint = Text.get("confirm_hint");
         rows.clear();
         rows.add(new Row("✔ " + Text.get("apply"), "", A_APPLY));
+        rows.add(new Row("◐ " + Text.get("lens_correction"),
+                lcEnabled ? Text.get("lc_on") : Text.get("lc_off"), A_LCTOGGLE));
+        rows.add(new Row("✎ " + Text.get("lc_adjust"), "", A_LCCORR));
         if (!lens.manual) {
             boolean fav = store.isFavorite(lens.id);
             rows.add(new Row(fav ? "★ " + Text.get("in_fav") : "★ " + Text.get("add_fav"), "", A_TOGGLEFAV));
         }
         sel = 0;
+        invalidate();
+    }
+
+    /** Lens-correction editor: 9 level rows (◀ ▶ adjust, write-through to
+     * the store) + reset. Ranges come from the camera when available. */
+    private void showLcCorr() {
+        state = ST_LCCORR;
+        title = Text.get("lc_adjust");
+        hint = Text.get("lc_hint");
+        if (lcRanges == null) lcRanges = sony.lensCorrectionRanges();
+        rows.clear();
+        top = 0;
+        // value embedded in the label (single column): the selected row
+        // would otherwise hide its sub, and long labels fit full-width
+        for (int i = 0; i < Store.LC_N; i++)
+            rows.add(new Row(Text.get(LC_LABELS[i]) + ": " + fmtLevel(lcLevels[i]), "", A_NOTHING));
+        rows.add(new Row(Text.get("lc_reset"), "", A_LCRESET));
+        sel = 0;
+        invalidate();
+    }
+
+    private static String fmtLevel(int v) {
+        return (v >= 0 ? "+" : "") + v;
+    }
+
+    private void refreshLcRow(int i) {
+        rows.set(i, new Row(Text.get(LC_LABELS[i]) + ": " + fmtLevel(lcLevels[i]), "", A_NOTHING));
         invalidate();
     }
 
@@ -256,6 +300,18 @@ final class MenuView extends View {
                 manApIdx = (manApIdx + d + APS.length) % APS.length;
                 refreshManualLabels();
             }
+        } else if (state == ST_LCCORR) {
+            if (sel >= 0 && sel < Store.LC_N && lcRanges != null) {
+                int lo = lcRanges[sel][0], hi = lcRanges[sel][1];
+                int v = lcLevels[sel] + d;
+                if (v < lo) v = lo;
+                if (v > hi) v = hi;
+                if (v != lcLevels[sel]) {
+                    lcLevels[sel] = v;
+                    store.setLensCorrection(lens.id, lcEnabled, lcLevels);
+                    refreshLcRow(sel);
+                }
+            }
         }
     }
 
@@ -316,6 +372,21 @@ final class MenuView extends View {
                 break;
             }
             case A_APPLY: apply(); break;
+            case A_LCTOGGLE:
+                if (lens != null) {
+                    lcEnabled = !lcEnabled;
+                    store.setLensCorrection(lens.id, lcEnabled, lcLevels);
+                    showConfirm(lens, chosenFocal);
+                }
+                break;
+            case A_LCCORR:
+                if (lens != null) showLcCorr();
+                break;
+            case A_LCRESET:
+                for (int i = 0; i < Store.LC_N; i++) lcLevels[i] = 0;
+                store.setLensCorrection(lens.id, lcEnabled, lcLevels);
+                showLcCorr();
+                break;
             case A_TOGGLEFAV:
                 if (lens != null && !lens.manual) {
                     store.toggleFavorite(lens.id);
@@ -367,6 +438,10 @@ final class MenuView extends View {
                     default: showHome(); break;
                 }
                 break;
+            case ST_LCCORR:
+                if (lens != null) showConfirm(lens, chosenFocal);
+                else showHome();
+                break;
         }
     }
 
@@ -380,11 +455,12 @@ final class MenuView extends View {
         // Zooms: IBIS gets the wide end (safe direction: under-corrects if
         // the user zooms in afterwards); the numeric EXIF focal is skipped
         // (a range is not a rational; it travels in lensName instead).
-        String res = sony.apply(lens.displayName(), chosenFocal, ap, !zoom);
+        String res = sony.apply(lens.displayName(), chosenFocal, ap, !zoom, lcEnabled, lcLevels);
         if (!lens.manual) store.setLastUsed(lens.id);
         String ibis = chosenFocal + " " + Text.get("mm")
                 + (zoom ? " " + Text.get("wide_end") : "");
         String msg = Text.fmt("applied", lens.displayName(), ibis);
+        if (lcEnabled) msg += " · " + Text.get("lc_applied");
         if (!sony.isCamera()) msg += "\n" + Text.get("sim_note") + "\n" + res;
         else if (res.length() > 0) msg += "\n" + res;
         showToast(msg);
@@ -485,10 +561,21 @@ final class MenuView extends View {
             if (i == sel) {
                 c.drawRect(0, y - 34, W, y + 14, pSel);
                 pSelT.setTextAlign(Paint.Align.LEFT);
-                c.drawText(r.label, 28, y, pSelT);
+                String label = r.label;
+                if (r.sub.length() > 0) {
+                    label = ellipsize(pSelT, label, 300 - 28 - 14);
+                    c.drawText(r.sub, 300, y, pSelT);
+                }
+                c.drawText(label, 28, y, pSelT);
             } else {
                 pRow.setTextAlign(Paint.Align.LEFT);
-                c.drawText(r.label, 28, y, pRow);
+                String label = r.label;
+                if (r.sub.length() > 0) {
+                    label = ellipsize(pRow, label, 300 - 28 - 14);
+                    pSub.setTextAlign(Paint.Align.LEFT);
+                    c.drawText(r.sub, 300, y, pSub);
+                }
+                c.drawText(label, 28, y, pRow);
             }
             y += rowH;
         }

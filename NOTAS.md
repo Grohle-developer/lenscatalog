@@ -144,3 +144,35 @@ zoom en el catálogo → directo a confirmación. Decisiones:
 - Medir que `setAntiHandBlurFocalLength` + `setParameters` no necesita
   nada más en la A7 II real.
 - Probar `/DCIM/LENSES/lenses.json` de usuario en la cámara.
+
+## Corrección de lente manual (v0.2.0, 2026-10-06)
+
+Mismo modelo que la app oficial de Sony *Lens Compensation* (PlayMemories,
+v2.41, de pago): valores manuales por objetivo para shading periférico
+(brillo/rojo/azul, zona completa + media), aberración cromática lateral
+(rojo/azul) y distorsión (completa + media). Verificado en los stubs
+públicos de OpenMemories (`CameraEx$ParametersModifier`):
+`setLensCorrection(boolean)`, `setLensCorrectionLevel(String,int)`,
+`getMin/MaxLensCorrectionLevel(String)` y 9 claves
+(`shading-w/-wm/-cr/-cb/-cm`, `chroma-r/-b`, `distotion/-m` — el typo es
+de Sony). Los parámetros existen en el blob de la A7 II (LiroSeq:
+`shading_correction`, `distortion_correction`, `lens_shading_data`,
+`lens_distortion_data`).
+
+Diseño:
+- Toggle "◐ Corrección de lente ON/OFF" en la pantalla de confirmación +
+  editor "✎ Ajustar corrección" con los 9 valores (◀ ▶, write-through a
+  `Store`; rangos consultados en vivo a la cámara, fallback ±20 en sim).
+- Al aplicar: `setLensCorrection(true)` + los 9 niveles; con el toggle en
+  OFF se escribe `setLensCorrection(false)` para que no queden valores de
+  otro objetivo. El perfil vive por id de objetivo en SharedPreferences
+  (`lc_<id>` = "enabled,v0,..,v8"): sobrevive a actualizaciones del JSON y
+  vale para objetivos manuales.
+- Verificado en sim: build OK, api-check OK, 0 errores en logcat, 5
+  pantallazos nuevos (`shots/25–29`).
+
+Pendiente en cámara: confirmar que los valores persisten tras salir de la
+app (el diseño los re-escribe en cada "Aplicar", así que el peor caso es
+re-aplicar al cambiar de objetivo); calibrar rangos reales por clave;
+formato `LENSxxxx.BIN` de la app oficial no revertido (import/export no
+implementado).

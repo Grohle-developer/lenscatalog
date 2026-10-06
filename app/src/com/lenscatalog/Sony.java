@@ -20,6 +20,21 @@ final class Sony {
     private Boolean present;
     private final StringBuilder log = new StringBuilder();
 
+    // -------------------------------------------- lens correction (manual)
+    // Parameter keys of CameraEx$ParametersModifier (public constants in the
+    // OpenMemories stubs; the values are the camera's own parameter names —
+    // note Sony's "distotion" typo, kept verbatim). Order: shading (5),
+    // chromatic aberration (2), distortion (2), as in Sony's Lens
+    // Compensation app manual.
+    static final String[] LC_KEYS = {
+        "shading-w", "shading-wm", "shading-cr", "shading-cb", "shading-cm",
+        "chroma-r", "chroma-b", "distotion", "distotion-m",
+    };
+    static final int LC_N = 9;
+    /** Simulator fallback range; on the camera the real min/max is queried
+     * per key via getMin/MaxLensCorrectionLevel. */
+    private static final int LC_SIM_MIN = -20, LC_SIM_MAX = 20;
+
     /** Open the camera's framework. Returns false in the simulator. */
     boolean open() {
         try {
@@ -62,6 +77,40 @@ final class Sony {
     }
 
     /**
+     * Per-key [min,max] for the 9 correction levels. On the camera the real
+     * range is queried per key (getMin/MaxLensCorrectionLevel); in the
+     * simulator a fixed fallback is returned (UI testing only).
+     */
+    int[][] lensCorrectionRanges() {
+        int[][] r = new int[LC_N][2];
+        if (!isCamera()) {
+            for (int i = 0; i < LC_N; i++) { r[i][0] = LC_SIM_MIN; r[i][1] = LC_SIM_MAX; }
+            return r;
+        }
+        try {
+            Camera.Parameters p = camera.getParameters();
+            Object mod = cameraEx.getClass()
+                    .getMethod("createParametersModifier", Camera.Parameters.class)
+                    .invoke(cameraEx, p);
+            Method getMin = mod.getClass().getMethod("getMinLensCorrectionLevel", String.class);
+            Method getMax = mod.getClass().getMethod("getMaxLensCorrectionLevel", String.class);
+            for (int i = 0; i < LC_N; i++) {
+                try {
+                    r[i][0] = ((Integer) getMin.invoke(mod, LC_KEYS[i])).intValue();
+                    r[i][1] = ((Integer) getMax.invoke(mod, LC_KEYS[i])).intValue();
+                } catch (Throwable t) {
+                    r[i][0] = LC_SIM_MIN; r[i][1] = LC_SIM_MAX;
+                }
+            }
+            i("lensCorrectionRanges queried");
+        } catch (Throwable t) {
+            e("lensCorrectionRanges", t);
+            for (int i = 0; i < LC_N; i++) { r[i][0] = LC_SIM_MIN; r[i][1] = LC_SIM_MAX; }
+        }
+        return r;
+    }
+
+    /**
      * Apply the chosen lens: IBIS focal length + pre-capture EXIF.
      * {@code numericExifFocal}: write the numeric EXIF FocalLength tag.
      * False for zooms: a range is not a rational, and writing the wide end
@@ -69,14 +118,26 @@ final class Sony {
      * (e.g. "Tokina 28-70mm f/2.8"). IBIS always gets a number (the wide
      * end for zooms: the safe direction, it under-corrects if the user
      * zooms in afterwards). Decision: Berto 2026-10-06.
+     * {@code lcEnabled}: manual lens correction on/off (Sony's Lens
+     * Compensation model); {@code lcLevels}: the 9 stored levels, applied
+     * only when enabled. Disabled writes setLensCorrection(false) so a
+     * previous lens's values cannot linger.
      * Returns a one-line human summary of what happened (or would happen).
      */
-    String apply(String lensDisplayName, int focal, double maxAperture, boolean numericExifFocal) {
+    String apply(String lensDisplayName, int focal, double maxAperture, boolean numericExifFocal,
+            boolean lcEnabled, int[] lcLevels) {
         if (!isCamera()) {
             i("SIM setAntiHandBlurFocalLength(" + focal + ")");
             i("SIM setExifInfo(lensName=\"" + lensDisplayName + "\", focal="
                     + (numericExifFocal ? focal + "/1" : "SKIPPED (zoom range)") + ", writeMode=true"
                     + (maxAperture > 0 ? ", fNumber~" + maxAperture : "") + ")");
+            i("SIM setLensCorrection(" + lcEnabled + ")");
+            if (lcEnabled && lcLevels != null) {
+                StringBuilder sb = new StringBuilder("SIM levels:");
+                for (int i = 0; i < LC_N && i < lcLevels.length; i++)
+                    sb.append(' ').append(LC_KEYS[i]).append('=').append(lcLevels[i]);
+                i(sb.toString());
+            }
             return "SIM";
         }
         StringBuilder done = new StringBuilder();
@@ -111,6 +172,27 @@ final class Sony {
                 }
             } else {
                 i("ExifInfo not supported: skipped");
+            }
+            // Manual lens correction (Sony's Lens Compensation model).
+            try {
+                Method setLC = mod.getClass().getMethod("setLensCorrection", boolean.class);
+                setLC.invoke(mod, lcEnabled);
+                if (lcEnabled && lcLevels != null) {
+                    Method setLevel = mod.getClass()
+                            .getMethod("setLensCorrectionLevel", String.class, int.class);
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < LC_N && i < lcLevels.length; i++) {
+                        setLevel.invoke(mod, LC_KEYS[i], lcLevels[i]);
+                        sb.append(LC_KEYS[i]).append('=').append(lcLevels[i]).append(' ');
+                    }
+                    done.append("LC=on ");
+                    i("setLensCorrection(true): " + sb.toString().trim());
+                } else {
+                    done.append("LC=off ");
+                    i("setLensCorrection(false)");
+                }
+            } catch (Throwable t) {
+                e("setLensCorrection", t);
             }
             camera.setParameters(p);
         } catch (Throwable t) {
