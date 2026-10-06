@@ -258,6 +258,14 @@ final class Sony {
             out.add("setLensCorrectionLevel: "
                     + (findMethod(mod.getClass(), "setLensCorrectionLevel", 2) != null
                             ? "EXISTS" : "MISSING"));
+            // Try a real setExifInfo invocation with dummy values and report
+            // whether the reflection chain itself works (not whether it persists).
+            try {
+                writeExif(mod, "DiagTest", 50, 1.8, true);
+                out.add("setExifInfo invoke: OK (no exception)");
+            } catch (Throwable t) {
+                out.add("setExifInfo invoke: FAILED: " + t.toString());
+            }
         } catch (Throwable t) {
             out.add("ERROR: " + t.toString());
         }

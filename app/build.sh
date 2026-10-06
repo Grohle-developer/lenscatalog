@@ -56,22 +56,46 @@ echo "[5/7] aapt package + dex"
 echo "[6/7] zipalign"
 "$BT/zipalign" -f 4 out/unaligned.apk out/aligned.apk
 
-echo "[7/7] sign (v1 only)"
-SIGN=(--min-sdk-version 10 --v1-signing-enabled true --v2-signing-enabled false --v3-signing-enabled false)
+echo "[7/7] sign (v1 only, Gingerbread-compatible)"
+# NOTE (2026-10-06): two hard lessons from the camera's Android 2.3.7, both found
+# by installing on an API 10 emulator:
+#  1. keytool (JDK 21) defaults to a SHA-384 self-signed cert -> rejected.
+#     Pin -sigalg SHA256withRSA (Tweak uses sha256WithRSA and installs fine).
+#  2. jarsigner (JDK 21) writes digest attributes as "SHA-1-Digest" (WITH hyphen),
+#     which Gingerbread's JarVerifier rejects ("invalid digest"). apksigner writes
+#     "SHA1-Digest" (no hyphen), like the working Tweak app. So: apksigner, not jarsigner.
+sign_apk() { # $1=keystore $2=storepass $3=keypass $4=alias
+  "$BT/apksigner" sign --ks "$1" --ks-pass "pass:$2" --key-pass "pass:$3" --ks-key-alias "$4" \
+    --min-sdk-version 10 --v1-signing-enabled true --v2-signing-enabled false --v3-signing-enabled false \
+    --out out/lenscatalog.apk out/aligned.apk
+}
 if [ -n "${ANDROID_KEYSTORE_B64:-}" ]; then
   KS="$(mktemp)"
   trap 'rm -f "$KS"' EXIT
   printf '%s' "$ANDROID_KEYSTORE_B64" | base64 -d > "$KS"
+  # real keystores carry their own alias/passwords; apksigner reads them from env below
   KS_PASS="${ANDROID_KEYSTORE_PASSWORD:?}" KEY_PASS="${ANDROID_KEY_PASSWORD:?}" \
   "$BT/apksigner" sign --ks "$KS" --ks-key-alias "${ANDROID_KEY_ALIAS:?}" \
-    --ks-pass env:KS_PASS --key-pass env:KEY_PASS "${SIGN[@]}" --out out/lenscatalog.apk out/aligned.apk
+    --ks-pass env:KS_PASS --key-pass env:KEY_PASS \
+    --min-sdk-version 10 --v1-signing-enabled true --v2-signing-enabled false --v3-signing-enabled false \
+    --out out/lenscatalog.apk out/aligned.apk
 else
   echo "      no ANDROID_KEYSTORE_B64: signing with debug.keystore (cannot update an install signed otherwise)"
   [ -e debug.keystore ] || "$JAVA/keytool" -genkeypair -keystore debug.keystore -alias lenscatalog \
-    -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=lenscatalog debug" 2>/dev/null
-  "$BT/apksigner" sign --ks debug.keystore --ks-pass pass:android --key-pass pass:android "${SIGN[@]}" \
-    --out out/lenscatalog.apk out/aligned.apk
+    -keyalg RSA -keysize 2048 -validity 10000 -sigalg SHA256withRSA -storepass android -keypass android -dname "CN=lenscatalog debug" 2>/dev/null
+  sign_apk debug.keystore android android lenscatalog
 fi
+echo "      checking signature algorithm (camera only accepts SHA-1/SHA-256)"
+RSA_FILE="$(unzip -Z1 out/lenscatalog.apk 'META-INF/*.RSA' | head -1)"
+SIGALG="$(unzip -p out/lenscatalog.apk "$RSA_FILE" | openssl pkcs7 -inform DER -print_certs -text -noout 2>/dev/null | grep -m1 'Signature Algorithm' | sed 's/.*: //')"
+echo "      signature algorithm: $SIGALG"
+case "$SIGALG" in
+  *sha1WithRSAEncryption*|*sha256WithRSAEncryption*) ;;
+  *) echo "BUILD FAILED: $SIGALG is rejected by the camera" >&2; exit 1 ;;
+esac
+DIGESTALG="$(unzip -p out/lenscatalog.apk META-INF/MANIFEST.MF | grep -m1 -o 'SHA-\?[0-9]*-Digest' || true)"
+echo "      manifest digest: $DIGESTALG"
+[ "$DIGESTALG" = "SHA1-Digest" ] || { echo "BUILD FAILED: '$DIGESTALG' digests are rejected by the camera (need SHA1-Digest, no hyphen)" >&2; exit 1; }
 "$BT/apksigner" verify --min-sdk-version 10 out/lenscatalog.apk
 ( cd out && sha256sum lenscatalog.apk > lenscatalog.apk.sha256 )
 echo "BUILD OK: $ROOT/out/lenscatalog.apk ($VERSION_NAME, versionCode $VERSION_CODE, $(du -k out/lenscatalog.apk | cut -f1) KB)"

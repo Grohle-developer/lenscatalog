@@ -139,7 +139,8 @@ def main():
     dexdump, api_xml, dex = sys.argv[1:4]
     min_api = int(sys.argv[4]) if len(sys.argv) > 4 else MIN_API_DEFAULT
     api = load_api(api_xml, min_api)
-    dump = subprocess.run([dexdump, "-d", dex], check=True, capture_output=True, text=True).stdout
+    dump = subprocess.run([dexdump, "-d", dex], check=True, capture_output=True,
+                          text=True, errors="replace").stdout
     own = load_dex(dump)
 
     problems = {}

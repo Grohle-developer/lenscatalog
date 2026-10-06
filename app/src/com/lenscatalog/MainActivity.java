@@ -25,7 +25,8 @@ public class MainActivity extends Activity implements MenuView.Listener {
         sony = new Sony();
         view = new MenuView(this, this, screen);
         setContentView(view);
-        view.init(Catalog.load(this), new Store(this), sony);
+        final LensLog lensLog = new LensLog(this);
+        view.init(Catalog.load(this), new Store(this), sony, lensLog);
         view.showChecking();
         // open the framework off the first draw; never block the UI thread long
         view.post(new Runnable() {
@@ -37,6 +38,14 @@ public class MainActivity extends Activity implements MenuView.Listener {
                     public void execute(Runnable r) { view.post(r); }
                 });
                 String lens = sony.lensName();
+                // Log an electronic-lens session if one is mounted (its EXIF
+                // is written by the camera; the tagger will skip those photos).
+                if (lens != null && lens.length() > 0) {
+                    LensLog.Session cur = lensLog.current();
+                    if (cur == null || !cur.electronic || !lens.equals(cur.displayName)) {
+                        lensLog.startSession("electronic", lens, 0, 0, true);
+                    }
+                }
                 view.showStart(lens);
             }
         });

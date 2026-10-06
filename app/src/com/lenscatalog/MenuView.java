@@ -41,6 +41,8 @@ final class MenuView extends View {
     private Catalog catalog;
     private Store store;
     private Sony sony;
+    private LensLog lensLog;
+    private Context ctx;
 
     /** Rows of the current list screen. */
     private final List<Row> rows = new ArrayList<Row>();
@@ -81,7 +83,7 @@ final class MenuView extends View {
     // row actions
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
-            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13;
+            A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14;
 
     private final Paint pTitle = new Paint(), pRow = new Paint(), pSub = new Paint(),
             pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint(),
@@ -106,10 +108,12 @@ final class MenuView extends View {
         setFocusableInTouchMode(true);
     }
 
-    void init(Catalog catalog, Store store, Sony sony) {
+    void init(Catalog catalog, Store store, Sony sony, LensLog lensLog) {
         this.catalog = catalog;
         this.store = store;
         this.sony = sony;
+        this.lensLog = lensLog;
+        this.ctx = getContext();
         logicalW = Screen.logicalWidth(screen.aspect, 640, 480, 480);
     }
 
@@ -152,6 +156,7 @@ final class MenuView extends View {
         }
         rows.add(new Row("✎ " + Text.get("manual"), "", A_MANUAL));
         rows.add(new Row("? " + Text.get("diagnostics"), "", A_DIAG));
+        rows.add(new Row(Text.get("tag_exif"), "", A_TAG));
         sel = 0;
         invalidate();
     }
@@ -373,6 +378,7 @@ final class MenuView extends View {
         switch (r.action) {
             case A_FAVORITES: showFavorites(); break;
             case A_DIAG: showDiag(); break;
+            case A_TAG: tagPhotos(); break;
             case A_LAST: {
                 Catalog.Lens l = catalog.byId(store.lastUsed());
                 if (l != null) {
@@ -471,6 +477,24 @@ final class MenuView extends View {
     /** Where MENU from ST_CONFIRM returns: one of ST_HOME/ST_FAVORITES/ST_MODELS/ST_MANUAL. */
     private int confirmBack = ST_HOME;
 
+    /** Run the post-capture EXIF tagger on a worker thread. */
+    private void tagPhotos() {
+        showResult(Text.get("tag_exif"), Text.get("tagging"));
+        new Thread(new Runnable() {
+            public void run() {
+                final PhotoTagger.Result r = new PhotoTagger(ctx, lensLog).tagNewPhotos();
+                final String body = Text.fmt("tag_result",
+                        String.valueOf(r.tagged), String.valueOf(r.alreadyTagged),
+                        String.valueOf(r.failed), String.valueOf(r.millis));
+                post(new Runnable() {
+                    public void run() {
+                        showResult(Text.get("tag_done"), body);
+                    }
+                });
+            }
+        }).start();
+    }
+
     private void apply() {
         if (lens == null) return;
         double ap = lens.maxAperture;
@@ -480,6 +504,10 @@ final class MenuView extends View {
         // (a range is not a rational; it travels in lensName instead).
         sony.apply(lens.displayName(), chosenFocal, ap, !zoom, lcEnabled, lcLevels);
         if (!lens.manual) store.setLastUsed(lens.id);
+        // Log the lens session for post-capture EXIF tagging.
+        if (lensLog != null) {
+            lensLog.startSession(lens.id, lens.displayName(), chosenFocal, ap, false);
+        }
         String ibis = chosenFocal + " " + Text.get("mm")
                 + (zoom ? " " + Text.get("wide_end") : "");
         StringBuilder body = new StringBuilder();
