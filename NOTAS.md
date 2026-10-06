@@ -136,6 +136,23 @@ zoom en el catálogo → directo a confirmación. Decisiones:
 6. Tour: tras toggle-favorito, `up` + `enter` desactivaba el favorito en
    vez de aplicar (sel ya estaba en "Aplicar").
 
+7. (v0.2.1) La ventana de resultado mostraba el string debug crudo
+   (`IBIS=80mm EXIF=ok LC=on ...`) en texto centrado poco legible.
+   Rediseñada como ventana de información: título \"✓ Aplicado\" + líneas
+   etiquetadas (objetivo, IBIS, EXIF, corrección ON/OFF); el detalle debug
+   queda solo en logcat.
+
+## v0.2.1 — re-aplicación de la corrección (2026-10-06)
+
+Reportado por Berto en cámara: tras aplicar una corrección y volver a
+cambiar un valor, el nuevo valor no se aplicaba (solo funcionaba volver a
+entrar y poner el toggle en OFF). Causa: el driver solo re-lee los niveles
+manuales en la transición off→on; re-escribir niveles con la corrección ya
+activada se ignora. Fix en `Sony.apply()`: commit 1 con IBIS+EXIF y
+`setLensCorrection(false)` explícito, y commit 2 (parámetros frescos,
+niveles primero, `setLensCorrection(true)` después) que fuerza la
+transición en cada \"Aplicar\". Pendiente de confirmación en cámara real.
+
 ## Pendiente (requiere cámara real)
 
 - H1–H7 del diseño: `setExifInfo` → ¿`LensModel` 0xA434? ¿persiste entre

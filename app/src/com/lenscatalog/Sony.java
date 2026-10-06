@@ -131,12 +131,14 @@ final class Sony {
             i("SIM setExifInfo(lensName=\"" + lensDisplayName + "\", focal="
                     + (numericExifFocal ? focal + "/1" : "SKIPPED (zoom range)") + ", writeMode=true"
                     + (maxAperture > 0 ? ", fNumber~" + maxAperture : "") + ")");
-            i("SIM setLensCorrection(" + lcEnabled + ")");
+            i("SIM commit 1: setLensCorrection(false) // drop latch");
             if (lcEnabled && lcLevels != null) {
-                StringBuilder sb = new StringBuilder("SIM levels:");
+                StringBuilder sb = new StringBuilder("SIM commit 2: levels then setLensCorrection(true):");
                 for (int i = 0; i < LC_N && i < lcLevels.length; i++)
                     sb.append(' ').append(LC_KEYS[i]).append('=').append(lcLevels[i]);
                 i(sb.toString());
+            } else {
+                i("SIM correction stays OFF");
             }
             return "SIM";
         }
@@ -174,19 +176,26 @@ final class Sony {
                 i("ExifInfo not supported: skipped");
             }
             // Manual lens correction (Sony's Lens Compensation model).
+            // The driver only re-reads the manual levels on the off->on
+            // transition: re-setting levels while the correction is already
+            // ON is ignored (only toggling OFF took effect). So commit 1
+            // below goes out with the correction OFF, and commit 2 (fresh
+            // params, levels first, then ON) forces the transition every time.
             try {
-                Method setLC = mod.getClass().getMethod("setLensCorrection", boolean.class);
-                setLC.invoke(mod, lcEnabled);
+                setLensCorrection(mod, false);
+                camera.setParameters(p);
                 if (lcEnabled && lcLevels != null) {
-                    Method setLevel = mod.getClass()
-                            .getMethod("setLensCorrectionLevel", String.class, int.class);
+                    Camera.Parameters p2 = camera.getParameters();
+                    Object mod2 = createModifier(p2);
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < LC_N && i < lcLevels.length; i++) {
-                        setLevel.invoke(mod, LC_KEYS[i], lcLevels[i]);
+                        setLensCorrectionLevel(mod2, LC_KEYS[i], lcLevels[i]);
                         sb.append(LC_KEYS[i]).append('=').append(lcLevels[i]).append(' ');
                     }
+                    setLensCorrection(mod2, true);
+                    camera.setParameters(p2);
                     done.append("LC=on ");
-                    i("setLensCorrection(true): " + sb.toString().trim());
+                    i("setLensCorrection off->on: " + sb.toString().trim());
                 } else {
                     done.append("LC=off ");
                     i("setLensCorrection(false)");
@@ -194,11 +203,26 @@ final class Sony {
             } catch (Throwable t) {
                 e("setLensCorrection", t);
             }
-            camera.setParameters(p);
         } catch (Throwable t) {
             e("apply", t);
         }
         return done.toString();
+    }
+
+    private Object createModifier(Camera.Parameters p) throws Exception {
+        return cameraEx.getClass()
+                .getMethod("createParametersModifier", Camera.Parameters.class)
+                .invoke(cameraEx, p);
+    }
+
+    private static void setLensCorrection(Object mod, boolean on) throws Exception {
+        mod.getClass().getMethod("setLensCorrection", boolean.class).invoke(mod, on);
+    }
+
+    private static void setLensCorrectionLevel(Object mod, String key, int level)
+            throws Exception {
+        mod.getClass().getMethod("setLensCorrectionLevel", String.class, int.class)
+                .invoke(mod, key, level);
     }
 
     private void writeExif(Object mod, String lensName, int focal, double maxAperture,

@@ -54,7 +54,7 @@ final class MenuView extends View {
     private Catalog.Lens lens;
     private int chosenFocal;
     private String brand; // ST_MODELS
-    private String toastMsg;
+    private String toastTitle = "", toastBody = "";
     private long toastUntil;
 
     // manual form state
@@ -83,7 +83,8 @@ final class MenuView extends View {
             A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12;
 
     private final Paint pTitle = new Paint(), pRow = new Paint(), pSub = new Paint(),
-            pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint();
+            pFoot = new Paint(), pSel = new Paint(), pSelT = new Paint(), pLine = new Paint(),
+            pBoxFill = new Paint(), pBox = new Paint();
 
     MenuView(Context ctx, Listener listener, Screen screen) {
         super(ctx);
@@ -98,6 +99,8 @@ final class MenuView extends View {
         pSelT.setColor(BLACK); pSelT.setTextSize(26); pSelT.setTypeface(Typeface.DEFAULT_BOLD);
         pSelT.setAntiAlias(true);
         pLine.setColor(LINE); pLine.setStrokeWidth(2);
+        pBoxFill.setColor(0xFF1A1A1A);
+        pBox.setColor(GRAY); pBox.setStyle(Paint.Style.STROKE); pBox.setStrokeWidth(3);
         setFocusable(true);
         setFocusableInTouchMode(true);
     }
@@ -240,9 +243,11 @@ final class MenuView extends View {
         invalidate();
     }
 
-    private void showToast(String msg) {
+    /** Result window: clear labeled lines, no debug text (that stays in logcat). */
+    private void showResult(String title, String body) {
         state = ST_TOAST;
-        toastMsg = msg;
+        toastTitle = title;
+        toastBody = body;
         toastUntil = System.currentTimeMillis() + 2400;
         invalidate();
         handler.postDelayed(new Runnable() {
@@ -455,15 +460,17 @@ final class MenuView extends View {
         // Zooms: IBIS gets the wide end (safe direction: under-corrects if
         // the user zooms in afterwards); the numeric EXIF focal is skipped
         // (a range is not a rational; it travels in lensName instead).
-        String res = sony.apply(lens.displayName(), chosenFocal, ap, !zoom, lcEnabled, lcLevels);
+        sony.apply(lens.displayName(), chosenFocal, ap, !zoom, lcEnabled, lcLevels);
         if (!lens.manual) store.setLastUsed(lens.id);
         String ibis = chosenFocal + " " + Text.get("mm")
                 + (zoom ? " " + Text.get("wide_end") : "");
-        String msg = Text.fmt("applied", lens.displayName(), ibis);
-        if (lcEnabled) msg += " · " + Text.get("lc_applied");
-        if (!sony.isCamera()) msg += "\n" + Text.get("sim_note") + "\n" + res;
-        else if (res.length() > 0) msg += "\n" + res;
-        showToast(msg);
+        StringBuilder body = new StringBuilder();
+        body.append(lens.displayName()).append('\n');
+        body.append(Text.get("summary_ibis")).append(": ").append(ibis).append('\n');
+        body.append(Text.get("summary_exif")).append(": ✓").append('\n');
+        body.append(Text.get("lens_correction")).append(": ")
+            .append(lcEnabled ? Text.get("lc_on") : Text.get("lc_off"));
+        showResult(Text.get("applied_title"), body.toString());
     }
 
     // ------------------------------------------------------------ drawing
@@ -491,7 +498,7 @@ final class MenuView extends View {
             return;
         }
         if (state == ST_TOAST) {
-            drawToast(c, W);
+            drawResult(c, W);
             return;
         }
         if (state == ST_CONFIRM) {
@@ -582,13 +589,28 @@ final class MenuView extends View {
         drawFooter(c, W);
     }
 
-    private void drawToast(Canvas c, int W) {
-        pRow.setTextAlign(Paint.Align.CENTER);
-        String[] lines = toastMsg.split("\n");
-        int y = 200 - (lines.length - 1) * 20;
-        for (String line : lines) {
-            c.drawText(line, W / 2, y, pRow);
-            y += 40;
+    /** Centered info window: title on top, labeled lines below. */
+    private void drawResult(Canvas c, int W) {
+        String[] lines = toastBody.split("\n");
+        int pad = 26, lineH = 42;
+        pRow.setTextAlign(Paint.Align.LEFT);
+        float maxW = pTitle.measureText(toastTitle);
+        for (String s : lines) maxW = Math.max(maxW, pRow.measureText(s));
+        int boxW = (int) Math.min(W - 60, maxW + pad * 2);
+        int boxL = (W - boxW) / 2, boxR = boxL + boxW;
+        int boxT = 96;
+        int boxB = boxT + 62 + lines.length * lineH + pad;
+        if (boxB > 472) boxB = 472;
+        c.drawRect(boxL, boxT, boxR, boxB, pBoxFill);
+        c.drawRect(boxL, boxT, boxR, boxB, pBox);
+        pTitle.setTextAlign(Paint.Align.CENTER);
+        c.drawText(ellipsize(pTitle, toastTitle, boxW - pad * 2), W / 2, boxT + 44, pTitle);
+        pTitle.setTextAlign(Paint.Align.LEFT);
+        c.drawLine(boxL + pad, boxT + 60, boxR - pad, boxT + 60, pLine);
+        int y = boxT + 60 + 40;
+        for (String s : lines) {
+            c.drawText(ellipsize(pRow, s, boxW - pad * 2), boxL + pad, y, pRow);
+            y += lineH;
         }
     }
 
