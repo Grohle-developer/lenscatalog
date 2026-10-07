@@ -9,3 +9,6 @@ assets/media-generation-*
 .DS_Store
 __pycache__/
 *.swp
+
+# simulator tour output (tour.sh)
+/out/

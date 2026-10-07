@@ -21,6 +21,10 @@ public class MainActivity extends Activity implements MenuView.Listener {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        // Every card-log line also goes to logcat (the simulator's tour reads it there).
+        AppLog.sink = new AppLog.Sink() {
+            public void line(String msg) { android.util.Log.i("LensCatalog", msg); }
+        };
         // Init the card log first, so every later AppLog.i() is recorded.
         try {
             java.io.File ext = android.os.Environment.getExternalStorageDirectory();
@@ -32,9 +36,13 @@ public class MainActivity extends Activity implements MenuView.Listener {
         screen = new Screen();
         sony = new Sony();
         view = new MenuView(this, this, screen);
+        view.setVersion(versionName());
         setContentView(view);
         final LensLog lensLog = new LensLog(this);
-        view.init(Catalog.load(this), new Store(this), sony, lensLog);
+        Catalog catalog = Catalog.load(this);
+        AppLog.i("catalogue: " + (catalog.userCopy ? "card" : "built-in") + ", "
+                + catalog.lenses.size() + " lenses, " + catalog.brands.size() + " brands");
+        view.init(catalog, new Store(this), sony, lensLog);
         view.showChecking();
         // open the framework off the first draw; never block the UI thread long
         view.post(new Runnable() {
@@ -62,8 +70,11 @@ public class MainActivity extends Activity implements MenuView.Listener {
     public boolean dispatchKeyEvent(KeyEvent e) {
         int k = Keys.logical(e.getScanCode(), e.getKeyCode());
         if (k == Keys.NONE) return super.dispatchKeyEvent(e);
-        if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0) {
-            view.onKey(k);
+        if (e.getAction() == KeyEvent.ACTION_DOWN) {
+            // A held arrow or wheel repeats (long lists, the focal picker);
+            // OK and MENU act once per press.
+            if (e.getRepeatCount() > 0 && Keys.oneShot(k)) return true;
+            view.onKey(k, e.getRepeatCount());
             return true;
         }
         return true;
@@ -71,6 +82,15 @@ public class MainActivity extends Activity implements MenuView.Listener {
 
     public void onExit() {
         finish();
+    }
+
+    /** This build's versionName, shown on the home screen and in diagnostics. */
+    private String versionName() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (Throwable t) {
+            return "";
+        }
     }
 
     protected void onDestroy() {

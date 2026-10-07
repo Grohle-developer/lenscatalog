@@ -3,9 +3,9 @@
 A PlayMemories Camera App (PMCA) for the **Sony A7 II** (Android 2.3.7, API 10):
 a catalog of manual and adapted lenses that injects EXIF data **before capture**
 and sets the IBIS focal length — so vintage glass gets proper stabilization and
-correct metadata. Pure Java, no JNI. ~56 KB APK, v1-signed.
+correct metadata. Pure Java, no JNI. ~120 KB APK, v1-signed.
 
-![catalog](shots/20-catalog-brands.png)
+![home](shots/01-inicio.png) ![lens page](shots/10-ficha-zoom.png)
 
 ## What it does
 
@@ -29,8 +29,16 @@ correct metadata. Pure Java, no JNI. ~56 KB APK, v1-signed.
   tune the 9 values in the built-in editor, and the app writes them via
   `setLensCorrection` / `setLensCorrectionLevel` when you apply the lens.
   Stored per lens on the camera; ranges are queried live from the framework.
-- Fully navigable **without touch** (D-pad / center / menu keys), in the visual
-  language of Sony's native menus.
+- **Write EXIF to photos**: after shooting, tags the new JPEGs on the card
+  with the lens that was applied when each was taken (`LensModel`, plus
+  `FocalLength` for primes and `FNumber`), in the Exif IFD, leaving the
+  camera's own EXIF, thumbnail and file time untouched.
+- Fully navigable **without touch** (D-pad / center / MENU, control wheel and
+  dials; ◀ ▶ pages through long lists, a held key repeats), in the visual
+  language of Sony's native menus: black and Sony orange, a header that says
+  where you are, drawn marks (the camera's font has no symbols), a legend of
+  the keys on every screen, and colours exactly on the camera's 4-bit levels.
+  Text is the bundled Roboto.
 - Bring your own catalog: drop a `lenses.json` in `/DCIM/LENSES/` on the memory
   card and the app prefers it over the built-in one.
 
@@ -56,13 +64,19 @@ Set `ANDROID_KEYSTORE_B64` (+ password/alias vars) to sign with a real key;
 otherwise a throwaway debug key is generated.
 
 `app/tools/api-check.py` verifies every platform call exists on API 10.
+`app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs
+(javac + python3/PIL + exiftool). `app/tools/icon.py` draws the launcher icon.
 
-A device simulator from the PMCA template setup runs the APK on a PC for
-UI testing without a camera: `sim.sh install <apk>`.
+`./tour.sh` runs the whole workflow on the A7 II simulator of
+[aintfilm-sony](https://github.com/Grohle-developer/aintfilm-sony)
+(`AINTFILM_SONY=<checkout>`; `sim/sim.sh setup` once): catalogue, favourites,
+lens correction, zoom, manual data, simulated shots, Write EXIF (the photos'
+EXIF checked with exiftool), diagnostics, log, an electronic lens, a card
+catalogue, wheel, paging and auto-exit, with screenshots in `out/tour/shots`.
 
 ## Status
 
-UI and logic are verified in the simulator (see `shots/`). The Sony framework
+UI and the full workflow are verified in the simulator (`tour.sh`, see `shots/`). The Sony framework
 calls (`getLensInfo`, `setAntiHandBlurFocalLength`, `setExifInfo`) degrade to
 log lines there — **on-camera verification is still pending**: whether
 `lensName` lands in EXIF `LensModel` (0xA434), whether `setExifInfo` persists
@@ -82,6 +96,8 @@ This project stands on the shoulders of giants:
   the modern build recipe this project's `build.sh` adapts (JDK + `d8`
   targeting API 10 + v1-only signing on current toolchains). Huge thanks for
   documenting the path.
+- **[Roboto](https://github.com/googlefonts/roboto)** (Apache-2.0, Google) — the
+  UI font, bundled in `app/assets/fonts` with its licence.
 - **The [Lensfun](https://lensfun.github.io) project** — the built-in lens
   database was compiled from factual lens specifications (brand, model, mount,
   focal length, aperture) in the Lensfun database (CC BY-SA 3.0); the source
@@ -89,4 +105,5 @@ This project stands on the shoulders of giants:
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). The bundled Roboto font is Apache-2.0
+(`app/assets/fonts/Roboto-LICENSE.txt`).

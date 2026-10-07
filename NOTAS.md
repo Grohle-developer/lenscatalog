@@ -12,7 +12,8 @@ lenscatalog/
     AndroidManifest.xml      package com.lenscatalog, minSdk/targetSdk 10
     build.sh                 receta adaptada (javac + d8, sin NDK)
     res/values/strings.xml
-    assets/lenses.json       semilla: 15 lentes (M42, K, MD, FD, C/Y, EF-manual)
+    assets/lenses.json       catálogo: 1187 objetivos, 48 marcas (lensfun)
+    assets/fonts/            Roboto Regular/Medium recortadas + licencia Apache-2.0
     src/com/lenscatalog/
       MainActivity.java      activity + dispatchKeyEvent por scan codes
       MenuView.java          UI + máquina de estados (estilo menú nativo Sony)
@@ -23,10 +24,14 @@ lenscatalog/
       Catalog.java           modelo JSON (org.json)
       Store.java             last_used + favorites (SharedPreferences)
       Text.java              ES/EN
-    tools/                   api-check.py + strip-params.py (plantilla, intactos)
-    out/lenscatalog.apk      24 KB, v1-only, API check OK
-  shots/                     20 pantallazos del sim
-  tour.sh                    tour automatizado de pantallazos
+      ExifWriter.java        EXIF post-captura (Exif IFD añadido, TIFF intacto)
+      PhotoTagger.java       etiquetado de fotos nuevas por sesión de objetivo
+      LensLog.java           historial de sesiones de objetivo
+    tools/                   api-check.py + strip-params.py (plantilla), icon.py
+    test/                    exif-test.sh: test de host de ExifWriter
+    out/lenscatalog.apk      ~120 KB, v1-only, API check OK
+  shots/                     pantallazos del sim (v0.3.0); shots/v0.2/ los anteriores
+  tour.sh                    workflow completo en el sim de aintfilm-sony, con checks
 ```
 
 ## Reutilización de la plantilla (`aintfilm-sony-claude/aintfilm-aintfilm-sony/`)
@@ -121,7 +126,7 @@ zoom en el catálogo → directo a confirmación. Decisiones:
   rango + IBIS 100 mm (angular) → toast; logcat:
   `setAntiHandBlurFocalLength(100)`,
   `setExifInfo(lensName="Canon EF 100-200mm f/4.5A", focal=SKIPPED (zoom range), …)`.
-  Pantallazos `shots/24-zoom-range-{models,confirm,toast}.png`.
+  Pantallazos `shots/v0.2/24-zoom-range-{models,confirm,toast}.png`.
 
 ## Bugs encontrados y corregidos (vía pantallazos)
 
@@ -186,10 +191,92 @@ Diseño:
   (`lc_<id>` = "enabled,v0,..,v8"): sobrevive a actualizaciones del JSON y
   vale para objetivos manuales.
 - Verificado en sim: build OK, api-check OK, 0 errores en logcat, 5
-  pantallazos nuevos (`shots/25–29`).
+  pantallazos nuevos (`shots/v0.2/25–29`).
 
 Pendiente en cámara: confirmar que los valores persisten tras salir de la
 app (el diseño los re-escribe en cada "Aplicar", así que el peor caso es
 re-aplicar al cambiar de objetivo); calibrar rangos reales por clave;
 formato `LENSxxxx.BIN` de la app oficial no revertido (import/export no
 implementado).
+
+## v0.3.0 — interfaz profesional + flujo completo verificado (2026-10-07)
+
+Petición de Berto: interfaz de nivel profesional y comprobar el workflow
+completo en el simulador A7 II de `aintfilm-sony` (`sim/sim.sh`).
+
+### Interfaz
+- Fuente propia: Roboto Regular/Medium (Apache-2.0, `assets/fonts`,
+  recortada a Latin-1 + Latin Ext-A + cirílico + puntuación, ~28 KB cada
+  una). La fuente de la cámara no tiene ★ ✓ ↑↓ ◀ ▶ (v0.2.6): ahora **todas
+  las marcas se dibujan como formas** (diafragma, estrella, check, flechas,
+  reloj, foto, lápiz, info, documento, encendido, ◐, deslizadores, ↺, aviso).
+  Quedaban glifos sin fuente en v0.2.7 (✔ ◐ ↑↓ ◀ ▶ ↺) que en cámara salían
+  como cuadros.
+- Paleta: cada color es un nivel exacto del framebuffer RGBA4444 de la
+  cámara (#RGB duplicado): nada de bandas ni grises que desaparecen.
+- Cabecera (marca + título + posición "12 / 104" o recuento, pastilla SIM
+  en el simulador), secciones en inicio (Acceso rápido / Catálogo /
+  Herramientas, no seleccionables), filas con icono, valor y chevron,
+  interruptores ON/OFF dibujados, barra de desplazamiento, leyenda de teclas
+  dibujada en el pie (como aintfilm-sony) y versión en inicio.
+- Listas de objetivos en dos líneas (nombre + "Zoom · 100–200 mm · f/4.5 ·
+  EF"), estrella en los favoritos. f/2.0 se muestra "f/2".
+- Ficha del objetivo: tarjeta con nombre, chips (ZOOM/FIJO, focal,
+  apertura, montura), IBIS, EXIF y aviso de zoom; las acciones ocupan el
+  resto (antes, en zooms, "Añadir a favoritos" quedaba oculta bajo el pie).
+- Editor de corrección: los 9 valores en una pantalla, con barra centrada en
+  0 y separadores por grupo.
+- Resultado: tarjeta con check, líneas etiquetadas y cuenta atrás de la
+  salida automática. Muestra el estado **real** de `Sony.apply()` (EXIF
+  "Listo" / "No admitido" / "Simulado"; antes siempre decía OK).
+- Datos manuales: selectores ◀ valor ▶ y vista previa del nombre EXIF;
+  focal 4–1000 mm (como dice el README; el código tenía 8).
+- Icono de la app: el diafragma de la cabecera en blanco sobre negro
+  (`app/tools/icon.py` lo dibuja con la misma geometría).
+
+### Teclas
+- Rueda de control y diales (scan codes 522/523/525/526, los mismos que usa
+  aintfilm-sony): mueven en listas y ajustan en el editor y en datos
+  manuales. ◀ ▶ en listas = página. Mantener pulsado repite (focal: 1, luego
+  5, luego 10 mm); OK y MENU siguen siendo de una pulsación.
+- Tras un toggle (corrección, favorito, salida auto) la selección se queda
+  en la fila; al volver (MENU) se recupera la posición en la lista.
+
+### Bugs encontrados en el recorrido y corregidos
+1. **ExifWriter destruía el EXIF de la cámara**: reconstruía IFD0 desde
+   cero, perdía el Exif IFD entero (exposición, ISO, fechas), la miniatura
+   (IFD1) y metía LensModel/FocalLength/FNumber en IFD0 (exiftool: "Bad
+   ExifIFD directory", "Wrong IFD"). Reescrito: el TIFF original no se toca
+   (todos sus offsets, MakerNote incluida, siguen válidos); se añade al final
+   un Exif IFD nuevo (entradas antiguas + las nuestras, ordenadas) y se
+   reapunta 0x8769. Conserva la fecha del fichero. Test de host:
+   `app/test/exif-test.sh` (7 casos: LE, BE, sin Exif IFD, sin EXIF, zoom,
+   dos pasadas, UTF-8); el escritor antiguo fallaba 68 comprobaciones.
+2. **Modelos con el mismo nombre en varias monturas** (Zeiss ZF.2 F/EF/K,
+   Tamron F/EF, Voigtländer K/EF/F…): `findLens()` buscaba por etiqueta y
+   abría siempre el primero. Ahora cada fila lleva su `Lens`.
+3. Etiquetado de zooms: escribía FocalLength = extremo angular, contra la
+   decisión de no escribir focal numérica en zooms. La sesión de un zoom
+   guarda focal 0 y el escritor deja el FocalLength de la cámara.
+4. "Escribir EXIF" con salida auto: el aviso "Etiquetando…" programaba la
+   salida a los 2,4 s y podía cerrar la app antes de ver el resultado.
+5. `AppLog` nunca enviaba a logcat (faltaba el sink); el contador de
+   Favoritos contaba ids que no están en el catálogo cargado.
+
+### Simulador
+- `tour.sh` (reescrito, rutas por variables): recorrido completo en
+  español con 27 pantallazos y comprobaciones (logcat, preferencias, EXIF de
+  las fotos con exiftool). "Dispara" escribiendo JPEG tipo A7 II en
+  `DCIM/100MSDCF` con la hora actual.
+- Objetivo electrónico en el sim: `/AINTFILM/SIM/LENS.TXT` con su nombre
+  (solo sin framework Sony).
+- Android 2.3 no tiene `am force-stop`: el tour mata el proceso por pid.
+- Pantallazos nuevos en `shots/`; los de v0.2 en `shots/v0.2/` (las
+  referencias de arriba a `shots/NN-…` son a esa carpeta).
+
+### Pendiente en cámara
+- Que `Typeface.createFromAsset` cargue Roboto (aintfilm-sony ya lo hace
+  con sus fuentes en la A7 II) y que la rueda llegue con 522/523.
+- Que el mtime que ve Android en la tarjeta coincida con
+  `System.currentTimeMillis()` (zona horaria del kernel vs. reloj de la
+  cámara): si no, el etiquetado no casa fotos con sesiones.
