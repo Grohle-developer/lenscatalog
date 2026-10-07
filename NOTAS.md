@@ -280,3 +280,37 @@ completo en el simulador A7 II de `aintfilm-sony` (`sim/sim.sh`).
 - Que el mtime que ve Android en la tarjeta coincida con
   `System.currentTimeMillis()` (zona horaria del kernel vs. reloj de la
   cámara): si no, el etiquetado no casa fotos con sesiones.
+
+## v0.3.1 — EXIF también en los RAW (2026-10-07)
+
+Pregunta de Berto: ¿escribe también en el raw? No lo hacía: el etiquetador
+solo miraba `.JPG`. Con un ARW real de la A7 II con objetivo manual
+(DSC01837.ARW: la cámara deja `LensModel "----"`, `FocalLength 0`,
+`FNumber 0`, `Sony:LensType 65535`) se implementan las dos vías:
+
+- **Dentro del ARW** (`ExifWriter.writeLensExifRaw`): el ARW es un TIFF
+  (IFD0 → 0x8769 Exif IFD → MakerNote Sony; SR2; datos del sensor). Se
+  añade al final del fichero un Exif IFD nuevo (entradas antiguas tal cual +
+  las nuestras) y se cambian solo los 4 bytes del puntero 0x8769, con
+  `RandomAccessFile`: no se leen ni reescriben los 24 MB (la cámara tiene
+  poca memoria) y si se corta a medias el fichero sigue siendo el de la
+  cámara (el puntero se cambia lo último, tras `sync`). Conserva la fecha.
+  Verificado con el ARW real: 4 bytes cambiados + 488 añadidos, las 2107
+  etiquetas restantes idénticas, decodificación rawpy/LibRaw bit a bit igual,
+  `raw-identify` (LibRaw: darktable, RawTherapee) ya lee
+  `Lens: Helios 44-2 58mm f/2`.
+- **Sidecar XMP** (`XmpSidecar`): `DSC01837.XMP` (8.3) con
+  `exifEX:LensModel`, `aux:Lens`, `exif:FocalLength` (solo fijos) y
+  `exif:FNumber`; es lo que Lightroom/Bridge/Capture One leen al importar,
+  aunque tomen el objetivo del MakerNote. Un `.XMP` que no escribió
+  LensCatalog (`x:xmptk`) no se sobrescribe.
+- El tagger cuenta la foto como etiquetada si cualquiera de las dos vías
+  funciona; el registro dice el resultado de cada una
+  (`tagger: raw DSC00001.ARW exif=ok sidecar=DSC00001.XMP`).
+- Test: `app/test/exif-test.sh` con ARW sintético (+ `ARW_SAMPLE=` para uno
+  real); `tour.sh` dispara RAW+JPEG (`LC_ARW=` para usar uno real).
+
+Pendiente en cámara: `exiftool` deja `Composite:LensID` en 65535 porque lo
+saca del `LensType` del MakerNote de Sony, que no se toca a propósito (es un
+bloque binario cifrado en parte); qué muestra Lightroom sin el sidecar
+depende de si prefiere el MakerNote o el EXIF — con el sidecar, el XMP manda.

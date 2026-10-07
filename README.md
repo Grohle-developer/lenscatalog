@@ -29,10 +29,17 @@ correct metadata. Pure Java, no JNI. ~120 KB APK, v1-signed.
   tune the 9 values in the built-in editor, and the app writes them via
   `setLensCorrection` / `setLensCorrectionLevel` when you apply the lens.
   Stored per lens on the camera; ranges are queried live from the framework.
-- **Write EXIF to photos**: after shooting, tags the new JPEGs on the card
+- **Write EXIF to photos**: after shooting, tags the new photos on the card
   with the lens that was applied when each was taken (`LensModel`, plus
-  `FocalLength` for primes and `FNumber`), in the Exif IFD, leaving the
-  camera's own EXIF, thumbnail and file time untouched.
+  `FocalLength` for primes and `FNumber`):
+  - **JPEG**: in the Exif IFD, leaving the camera's own EXIF, thumbnail and
+    file time untouched.
+  - **RAW (ARW)**: in the file's Exif IFD, in place — a new Exif IFD is
+    appended and only IFD0's 4-byte pointer changes, so the sensor data,
+    Sony's MakerNote and SR2 block stay byte-identical (verified on a real
+    A7 II ARW: same decode before and after) — and in an **XMP sidecar**
+    next to it (`DSC01837.XMP`), which Lightroom, Bridge and Capture One read
+    on import. A sidecar LensCatalog did not write is never overwritten.
 - Fully navigable **without touch** (D-pad / center / MENU, control wheel and
   dials; ◀ ▶ pages through long lists, a held key repeats), in the visual
   language of Sony's native menus: black and Sony orange, a header that says
@@ -64,13 +71,15 @@ Set `ANDROID_KEYSTORE_B64` (+ password/alias vars) to sign with a real key;
 otherwise a throwaway debug key is generated.
 
 `app/tools/api-check.py` verifies every platform call exists on API 10.
-`app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs
-(javac + python3/PIL + exiftool). `app/tools/icon.py` draws the launcher icon.
+`app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs and ARWs
+(javac + python3/PIL + exiftool; `ARW_SAMPLE=<file.ARW>` adds a real raw file,
+checked to decode identically with rawpy). `app/tools/icon.py` draws the launcher icon.
 
 `./tour.sh` runs the whole workflow on the A7 II simulator of
 [aintfilm-sony](https://github.com/Grohle-developer/aintfilm-sony)
 (`AINTFILM_SONY=<checkout>`; `sim/sim.sh setup` once): catalogue, favourites,
-lens correction, zoom, manual data, simulated shots, Write EXIF (the photos'
+lens correction, zoom, manual data, simulated shots (one RAW+JPEG;
+`LC_ARW=<file.ARW>` uses a real raw file), Write EXIF (the photos'
 EXIF checked with exiftool), diagnostics, log, an electronic lens, a card
 catalogue, wheel, paging and auto-exit, with screenshots in `out/tour/shots`.
 

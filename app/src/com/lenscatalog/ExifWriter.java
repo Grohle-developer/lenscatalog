@@ -4,13 +4,15 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.RandomAccessFile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 /**
- * Minimal pure-Java EXIF writer for JPEGs (API 10 has no LensModel tag).
+ * Minimal pure-Java EXIF writer for JPEGs and Sony's ARW raw files (API 10
+ * has no LensModel tag).
  * Sets, in the Exif sub-IFD where the standard puts them:
  *   0xA434 LensModel (ASCII), 0x920A FocalLength (RATIONAL, only when
  *   focalMm > 0), 0x829D FNumber (RATIONAL, only when fNumber > 0).
@@ -158,7 +160,6 @@ final class ExifWriter {
 
             // The old Exif IFD's entries, verbatim (their offsets stay valid),
             // minus the tags written here.
-            boolean writeFocal = focalMm > 0, writeF = fNumber > 0;
             List<byte[]> entries = new ArrayList<byte[]>();
             if (exifIfd <= 0) {
                 // a new Exif IFD says which version of the standard it is
@@ -169,9 +170,7 @@ final class ExifWriter {
                 if (exifIfd + 2 + n * 12 > tiff.length) return null;
                 for (int i = 0; i < n; i++) {
                     int e = exifIfd + 2 + i * 12;
-                    int tag = u16(tiff, e, le);
-                    if (tag == TAG_LENS_MODEL || (writeFocal && tag == TAG_FOCAL_LENGTH)
-                            || (writeF && tag == TAG_FNUMBER)) continue;
+                    if (replaced(u16(tiff, e, le), focalMm, fNumber)) continue;
                     entries.add(subarray(tiff, e, 12));
                 }
             }
@@ -179,37 +178,9 @@ final class ExifWriter {
             ByteArrayOutputStream out = new ByteArrayOutputStream(tiff.length + 1024);
             out.write(tiff, 0, tiff.length);
             if (out.size() % 2 != 0) out.write(0);
-
-            // The new Exif IFD; the values of the tags set here follow it.
-            byte[] lensBytes = (lensModel + "\0").getBytes("UTF-8");
-            int count = entries.size() + 1 + (writeFocal ? 1 : 0) + (writeF ? 1 : 0);
             int exifAt = out.size();
-            int dp = exifAt + 2 + count * 12 + 4;
-            ByteArrayOutputStream data = new ByteArrayOutputStream();
-            if (lensBytes.length <= 4) {
-                byte[] inline = new byte[4];
-                System.arraycopy(lensBytes, 0, inline, 0, lensBytes.length);
-                entries.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, inline, le));
-            } else {
-                entries.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, u32bytes(dp + data.size(), le), le));
-                data.write(lensBytes, 0, lensBytes.length);
-                if (data.size() % 2 != 0) data.write(0);
-            }
-            if (writeFocal) {
-                entries.add(entry(TAG_FOCAL_LENGTH, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
-                write32(data, focalMm, le); write32(data, 1, le);
-            }
-            if (writeF) {
-                entries.add(entry(TAG_FNUMBER, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
-                write32(data, (int) Math.round(fNumber * 100), le); write32(data, 100, le);
-            }
-            sortByTag(entries, le);
-            write16(out, entries.size(), le);
-            for (byte[] e : entries) out.write(e, 0, e.length);
-            write32(out, 0, le); // the Exif IFD has no next IFD
-            byte[] d = data.toByteArray();
-            out.write(d, 0, d.length);
-            if (out.size() % 2 != 0) out.write(0);
+            byte[] ifd = exifIfd(entries, exifAt, lensModel, focalMm, fNumber, le);
+            out.write(ifd, 0, ifd.length);
 
             byte[] res;
             if (exifPtrEntry >= 0) {
@@ -233,6 +204,128 @@ final class ExifWriter {
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    /** Whether an old Exif IFD entry gives way to one written here. */
+    private static boolean replaced(int tag, int focalMm, double fNumber) {
+        return tag == TAG_LENS_MODEL || (focalMm > 0 && tag == TAG_FOCAL_LENGTH)
+                || (fNumber > 0 && tag == TAG_FNUMBER);
+    }
+
+    /**
+     * A new Exif IFD to be placed at offset `at` of the TIFF: `entries` (the
+     * old ones kept, verbatim) plus the lens tags, sorted by tag, then the
+     * values of the lens tags. Even length, so what follows stays aligned.
+     */
+    private static byte[] exifIfd(List<byte[]> entries, int at, String lensModel, int focalMm,
+            double fNumber, boolean le) throws Exception {
+        boolean writeFocal = focalMm > 0, writeF = fNumber > 0;
+        byte[] lensBytes = (lensModel + "\0").getBytes("UTF-8");
+        List<byte[]> all = new ArrayList<byte[]>(entries);
+        int count = all.size() + 1 + (writeFocal ? 1 : 0) + (writeF ? 1 : 0);
+        int dp = at + 2 + count * 12 + 4;
+        ByteArrayOutputStream data = new ByteArrayOutputStream();
+        if (lensBytes.length <= 4) {
+            byte[] inline = new byte[4];
+            System.arraycopy(lensBytes, 0, inline, 0, lensBytes.length);
+            all.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, inline, le));
+        } else {
+            all.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, u32bytes(dp + data.size(), le), le));
+            data.write(lensBytes, 0, lensBytes.length);
+            if (data.size() % 2 != 0) data.write(0);
+        }
+        if (writeFocal) {
+            all.add(entry(TAG_FOCAL_LENGTH, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
+            write32(data, focalMm, le); write32(data, 1, le);
+        }
+        if (writeF) {
+            all.add(entry(TAG_FNUMBER, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
+            write32(data, (int) Math.round(fNumber * 100), le); write32(data, 100, le);
+        }
+        sortByTag(all, le);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        write16(out, all.size(), le);
+        for (byte[] e : all) out.write(e, 0, e.length);
+        write32(out, 0, le); // the Exif IFD has no next IFD
+        byte[] d = data.toByteArray();
+        out.write(d, 0, d.length);
+        if (out.size() % 2 != 0) out.write(0);
+        return out.toByteArray();
+    }
+
+    // ---- raw files ----
+
+    /**
+     * The lens tags into a TIFF-based raw file (Sony's ARW) in place. Nothing
+     * of the file moves (a raw converter finds the sensor data, Sony's
+     * MakerNote and SR2 block at the offsets the camera wrote): the new Exif
+     * IFD is appended at the end of the file, then IFD0's 4-byte pointer to the
+     * Exif IFD is moved to it. Only those few hundred bytes are read and
+     * written, never the 24 MB of the file. If the write stops half way, the
+     * file is still the camera's: the pointer is changed last. The file keeps
+     * its time. Null = ok.
+     */
+    static String writeLensExifRaw(String path, String lensModel, int focalMm, double fNumber) {
+        RandomAccessFile f = null;
+        try {
+            File file = new File(path);
+            long mtime = file.lastModified();
+            f = new RandomAccessFile(file, "rw");
+            long len = f.length();
+            if (len < 16 || len > 0x7FFFFF00L) return "unreadable";
+            byte[] h = read(f, len, 0, 8);
+            boolean le;
+            if (h[0] == 'I' && h[1] == 'I') le = true;
+            else if (h[0] == 'M' && h[1] == 'M') le = false;
+            else return "not a TIFF raw";
+            if (u16(h, 2, le) != 42) return "not a TIFF raw";
+            long ifd0 = u32(h, 4, le);
+            int n0 = u16(read(f, len, ifd0, 2), 0, le);
+            byte[] e0 = read(f, len, ifd0 + 2, n0 * 12);
+            long ptr = -1, exifIfd = 0;
+            for (int i = 0; i < n0; i++) {
+                if (u16(e0, i * 12, le) == TAG_EXIF_IFD) {
+                    ptr = ifd0 + 2 + i * 12 + 8;
+                    exifIfd = u32(e0, i * 12 + 8, le);
+                }
+            }
+            if (ptr < 0 || exifIfd <= 0) return "no Exif IFD";
+            int n = u16(read(f, len, exifIfd, 2), 0, le);
+            if (n > 1000) return "unreadable EXIF";
+            byte[] ex = read(f, len, exifIfd + 2, n * 12);
+            List<byte[]> entries = new ArrayList<byte[]>();
+            for (int i = 0; i < n; i++) {
+                if (replaced(u16(ex, i * 12, le), focalMm, fNumber)) continue;
+                entries.add(subarray(ex, i * 12, 12));
+            }
+            long at = len + (len % 2);
+            byte[] ifd = exifIfd(entries, (int) at, lensModel, focalMm, fNumber, le);
+            f.seek(len);
+            if (at > len) f.write(0);
+            f.write(ifd);
+            f.getFD().sync();
+            f.seek(ptr);
+            f.write(u32bytes((int) at, le));
+            f.close();
+            f = null;
+            if (mtime > 0) file.setLastModified(mtime);
+            return null;
+        } catch (Throwable t) {
+            return t.toString();
+        } finally {
+            if (f != null) {
+                try { f.close(); } catch (Throwable ignored) { }
+            }
+        }
+    }
+
+    /** n bytes at pos, which must lie inside the file. */
+    private static byte[] read(RandomAccessFile f, long len, long pos, int n) throws Exception {
+        if (pos < 0 || n < 0 || pos + n > len) throw new java.io.EOFException("offset " + pos + " past the end");
+        byte[] b = new byte[n];
+        f.seek(pos);
+        f.readFully(b);
+        return b;
     }
 
     // ---- helpers ----

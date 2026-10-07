@@ -11,8 +11,10 @@ import java.util.List;
 
 /**
  * Post-capture EXIF tagging: walks the card's DCIM folders, matches each
- * untagged JPEG to the lens session active when it was shot (by timestamp),
- * and writes LensModel/FocalLength/FNumber. Electronic-lens sessions are
+ * untagged JPEG and raw file (ARW) to the lens session active when it was shot
+ * (by timestamp), and writes LensModel/FocalLength/FNumber: into the JPEG's
+ * EXIF; into the ARW's EXIF in place and into an XMP sidecar next to it
+ * (DSC01837.XMP), so a raw converter has the lens whichever it reads. Electronic-lens sessions are
  * skipped (the camera already wrote their EXIF). Only photos newer than
  * the last run are considered, so a run over hundreds of files is a fast
  * stat walk plus EXIF writes for the new ones only.
@@ -71,7 +73,7 @@ final class PhotoTagger {
             long mtime = f.lastModified();
             if (mtime <= lastRun) continue;
             String name = f.getName().toLowerCase();
-            if (!name.endsWith(".jpg") && !name.endsWith(".jpeg")) continue;
+            if (!isPhoto(name)) continue;
             String key = "tagged_" + f.getName();
             if (p.getBoolean(key, false)) {
                 r.alreadyTagged++;
@@ -94,8 +96,17 @@ final class PhotoTagger {
                 if (mtime > newest) newest = mtime;
                 continue;
             }
-            String err = ExifWriter.writeLensExif(f.getAbsolutePath(),
-                    s.displayName, s.focal, s.aperture);
+            String err;
+            if (isRaw(name)) {
+                err = ExifWriter.writeLensExifRaw(f.getAbsolutePath(), s.displayName, s.focal, s.aperture);
+                String side = XmpSidecar.write(f, s.displayName, s.focal, s.aperture);
+                AppLog.i("tagger: raw " + f.getName() + " exif=" + (err == null ? "ok" : err)
+                        + " sidecar=" + (side == null ? XmpSidecar.fileFor(f).getName() : side));
+                // the lens is on record if either one took it
+                if (side == null) err = null;
+            } else {
+                err = ExifWriter.writeLensExif(f.getAbsolutePath(), s.displayName, s.focal, s.aperture);
+            }
             if (err == null) {
                 r.tagged++;
                 p.edit().putBoolean(key, true).commit();
@@ -115,7 +126,17 @@ final class PhotoTagger {
         return r;
     }
 
-    /** All JPEGs under the card's DCIM tree (100MSDCF and friends). */
+    /** A file the tagger writes: a JPEG or a raw file. */
+    static boolean isPhoto(String lowerName) {
+        return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || isRaw(lowerName);
+    }
+
+    /** Sony's raw files (TIFF-based). */
+    static boolean isRaw(String lowerName) {
+        return lowerName.endsWith(".arw");
+    }
+
+    /** All JPEGs and raw files under the card's DCIM tree (100MSDCF and friends). */
     private List<File> listPhotos() {
         List<File> out = new ArrayList<File>();
         // Sony A7 II: /DCIM/100MSDCF on the card. Try several roots.
@@ -146,8 +167,7 @@ final class PhotoTagger {
             if (f.isDirectory()) {
                 walk(f, out);
             } else {
-                String n = f.getName().toLowerCase();
-                if (n.endsWith(".jpg") || n.endsWith(".jpeg")) out.add(f);
+                if (isPhoto(f.getName().toLowerCase())) out.add(f);
             }
         }
     }

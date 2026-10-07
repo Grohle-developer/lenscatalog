@@ -7,6 +7,9 @@
   bigendian.jpg   the same layout in a big-endian (MM) TIFF
   noexifptr.jpg   IFD0 and IFD1, but no Exif IFD
   noexif.jpg      no EXIF at all
+  sony.arw        a raw file as the A7 II writes it, in outline: a TIFF whose IFD0 points
+                  to the Exif IFD (LensModel "----", FocalLength 0, FNumber 0), then
+                  "sensor data" (the bytes a raw converter reads, which must not move)
 
     exif_fixtures.py <out-dir>
 """
@@ -91,6 +94,8 @@ def main():
     img.save(os.path.join(out, "bigendian.jpg"), "JPEG", quality=90, exif=b"Exif\0\0" + tiff(">", th))
     img.save(os.path.join(out, "noexifptr.jpg"), "JPEG", quality=90, exif=b"Exif\0\0" + tiff("<", th, False))
     img.save(os.path.join(out, "noexif.jpg"), "JPEG", quality=90)
+    with open(os.path.join(out, "sony.arw"), "wb") as f:
+        f.write(tiff("<", th) + bytes(range(256)) * 2048)
 
 
 if __name__ == "__main__":

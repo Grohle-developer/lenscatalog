@@ -4,6 +4,11 @@ the lens tags land in the Exif IFD, the camera's EXIF and thumbnail survive, the
 image data is byte-identical, the file keeps its time, and exiftool -validate
 finds nothing new.
 
+Raw files (.arw) are written in place, with an XMP sidecar: there, the file
+must be the camera's byte for byte but for the 4 bytes of IFD0's Exif pointer,
+and the sidecar must say the lens. ARW_SAMPLE=<a real .ARW> adds that file to
+the cases (and, with rawpy installed, checks it decodes to the same image).
+
     exif_check.py <classes-dir> <fixtures-dir>
 """
 import hashlib
@@ -62,7 +67,12 @@ CASES = [
     ("bigendian.jpg", [("Jupiter-9 85mm f/2", 85, 2.0)]),
     ("noexifptr.jpg", [("Industar-61 L/Z 50mm f/2.8", 50, 2.8)]),
     ("noexif.jpg", [("Manual 50mm f/1.8", 50, 1.8)]),
+    ("sony.arw", [("Helios 44-2 58mm f/2", 58, 2.0)]),
+    ("sony.arw", [("Canon FD 35-70mm f/4", 0, 4.0), ("Canon FD 35-70mm f/4 (2)", 0, 4.0)]),  # zoom, twice
 ]
+if os.environ.get("ARW_SAMPLE"):
+    shutil.copy(os.environ["ARW_SAMPLE"], os.path.join(FX, "sample.arw"))
+    CASES.append(("sample.arw", [("Helios 44-2 58mm f/2", 58, 2.0)]))
 
 work = os.path.join(FX, "work")
 os.makedirs(work, exist_ok=True)
@@ -70,7 +80,10 @@ for n, (name, writes) in enumerate(CASES):
     p = os.path.join(work, "%d-%s" % (n, name))
     shutil.copy(os.path.join(FX, name), p)
     os.utime(p, (1759831200, 1759831200))
-    before, data0, warn0 = tags(p), image_data(p), warnings(p)
+    raw = name.endswith(".arw")
+    orig = open(p, "rb").read()
+    before, warn0 = tags(p), warnings(p)
+    data0 = None if raw else image_data(p)
     for lens, focal, f in writes:
         out = write(p, lens, focal, f)
     print("%s <- %r: %s" % (os.path.basename(p), lens, out))
@@ -93,9 +106,39 @@ for n, (name, writes) in enumerate(CASES):
     if "IFD1:ThumbnailLength" in before:
         r = subprocess.run(["exiftool", "-b", "-ThumbnailImage", p], capture_output=True)
         check(r.stdout[:2] == b"\xff\xd8" and len(r.stdout) == before["IFD1:ThumbnailLength"], "thumbnail intact")
-    check(image_data(p) == data0, "image data byte-identical")
+    if raw:
+        now = open(p, "rb").read()
+        moved = [i for i in range(len(orig)) if orig[i] != now[i]]
+        check(len(now) >= len(orig) and 0 < len(moved) and moved[-1] - moved[0] < 4,
+              "raw: the camera's bytes untouched but the 4 of the Exif pointer (changed: %s)" % moved[:8])
+        x = tags(os.path.splitext(p)[0] + ".XMP")
+        check(x.get("XMP-exifEX:LensModel") == lens and x.get("XMP-aux:Lens") == lens
+              and abs(x.get("XMP-exif:FNumber", 0) - f) < 1e-6
+              and (x.get("XMP-exif:FocalLength") == focal if focal > 0 else "XMP-exif:FocalLength" not in x),
+              "sidecar %s says the lens" % os.path.basename(os.path.splitext(p)[0] + ".XMP"))
+        try:
+            import numpy, rawpy
+            def decoded(path):
+                with rawpy.imread(path) as r:
+                    return hashlib.sha1(r.raw_image_visible.tobytes()).hexdigest()
+            if name == "sample.arw":
+                src = os.path.join(FX, "sample.arw")
+                check(decoded(p) == decoded(src), "raw: decodes to the same sensor data (rawpy)")
+        except ImportError:
+            pass
+    else:
+        check(image_data(p) == data0, "image data byte-identical")
     check(int(os.path.getmtime(p)) == 1759831200, "file time kept")
     new = warnings(p) - warn0
     check(not new, "exiftool -validate: nothing new %s" % sorted(new))
+# a sidecar someone else wrote (edits from a computer) is left alone
+p = os.path.join(work, "foreign.arw")
+shutil.copy(os.path.join(FX, "sony.arw"), p)
+foreign = os.path.splitext(p)[0] + ".XMP"
+open(foreign, "w").write("<x:xmpmeta xmlns:x='adobe:ns:meta/' x:xmptk='Adobe XMP Core'>my edits</x:xmpmeta>")
+out = write(p, "Helios 44-2 58mm f/2", 58, 2.0)
+print("foreign.arw with someone's sidecar: %s" % out)
+check(open(foreign).read().endswith("my edits</x:xmpmeta>"), "someone else's sidecar kept")
+check(tags(p).get("ExifIFD:LensModel") == "Helios 44-2 58mm f/2", "the raw file still tagged")
 print("FAILURES: %d" % fails)
 sys.exit(1 if fails else 0)
