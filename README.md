@@ -70,6 +70,22 @@ Override via `JAVA_HOME`, `ANDROID_SDK`, `BUILD_TOOLS`, `PLATFORM_JAR`.
 Set `ANDROID_KEYSTORE_B64` (+ password/alias vars) to sign with a real key;
 otherwise a throwaway debug key is generated.
 
+### Signing key (DO NOT REGENERATE)
+
+`app/debug.keystore` is the **production signing key**, committed to the repo
+so every dev builds update-compatible APKs. Details:
+- Alias: `lenscatalog`, passwords: `android` / `android`
+- Certificate: SHA256withRSA, fingerprint
+  `13:39:05:BE:28:CF:B5:71:8B:00:E4:DA:22:90:80:66:61:A0:C6:B7:09:DA:52:48:EB:5D:FE:2E:95:D6:2A:C2`
+- The camera rejects SHA-384 certificates and `jarsigner` output;
+  `build.sh` pins `-sigalg SHA256withRSA` and uses `apksigner` (v1 only).
+
+Regenerating this key breaks updates: the camera refuses to install an APK
+signed with a different key over the existing install (error 504). If the
+key is lost, users must uninstall first. A backup lives at
+`~/workspace/a7ii-fw/lenscatalog-keystore-backup-2026-10-06.keystore`
+(dev machine only, not in git).
+
 `app/tools/api-check.py` verifies every platform call exists on API 10.
 `app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs and ARWs
 (javac + python3/PIL + exiftool; `ARW_SAMPLE=<file.ARW>` adds a real raw file,
