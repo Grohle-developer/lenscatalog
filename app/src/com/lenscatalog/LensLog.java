@@ -114,12 +114,15 @@ final class LensLog {
 
     /**
      * Find the session active at the given time, or null.
+     * STRICT: only completed sessions (endTime != 0) with
+     * startTime <= time < endTime. The tagger closes the current
+     * session before matching, so open-ended sessions never match.
      * Electronic sessions are returned too; the caller decides to skip them.
      */
     synchronized Session sessionAt(long time) {
         for (int i = sessions.size() - 1; i >= 0; i--) {
             Session s = sessions.get(i);
-            if (s.startTime <= time && (s.isCurrent() || time < s.endTime)) return s;
+            if (!s.isCurrent() && s.startTime <= time && time < s.endTime) return s;
         }
         return null;
     }

@@ -78,4 +78,13 @@ final class Store {
         for (int i = 0; i < LC_N; i++) sb.append(',').append(levels[i]);
         p.edit().putString("lc_" + id, sb.toString()).commit();
     }
+
+    /** Whether the app exits automatically after Apply/Tag (default: true). */
+    boolean autoExit() {
+        return p.getBoolean("auto_exit", true);
+    }
+
+    void setAutoExit(boolean v) {
+        p.edit().putBoolean("auto_exit", v).commit();
+    }
 }

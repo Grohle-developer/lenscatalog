@@ -21,6 +21,14 @@ public class MainActivity extends Activity implements MenuView.Listener {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        // Init the card log first, so every later AppLog.i() is recorded.
+        try {
+            java.io.File ext = android.os.Environment.getExternalStorageDirectory();
+            AppLog.init(new java.io.File(ext, "AINTFILM"));
+            AppLog.i("LensCatalog start");
+        } catch (Throwable t) {
+            // ignore
+        }
         screen = new Screen();
         sony = new Sony();
         view = new MenuView(this, this, screen);
