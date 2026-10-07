@@ -28,6 +28,8 @@ final class PhotoTagger {
         int skippedElectronic;
         int alreadyTagged;
         int failed;
+        /** Photographs no lens session covers: taken before any Apply. */
+        int noSession;
         long millis;
     }
 
@@ -50,11 +52,13 @@ final class PhotoTagger {
         // Photos are then matched strictly by [start, end) from the log.
         // A fresh session with the same lens starts immediately, so the
         // log stays continuous for photos taken after this run.
+        String ext = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
         LensLog.Session cur = log.current();
         if (cur != null) {
-            log.endCurrentSession(t0);
-            log.startSession(cur.id, cur.displayName, cur.focal, cur.aperture, cur.electronic);
-            AppLog.i("tagger: session breakpoint at " + t0);
+            long next = CardSeq.next(ext);
+            log.endCurrentSession(t0, next);
+            log.startSession(cur.id, cur.displayName, cur.focal, cur.aperture, cur.electronic, next);
+            AppLog.i("tagger: session breakpoint at " + t0 + ", photo " + next);
         }
 
         List<File> photos = listPhotos();
@@ -81,15 +85,19 @@ final class PhotoTagger {
                 continue;
             }
             AppLog.i("tagger: candidate " + f.getAbsolutePath() + " mtime=" + mtime);
-            LensLog.Session s = log.sessionAt(mtime);
+            // by the camera's numbering (clock-free); by time only for
+            // sessions logged before 0.3.2, which have no numbers
+            long k = CardSeq.key(f);
+            LensLog.Session s = log.sessionAtKey(k);
+            if (s == null) s = log.sessionAt(mtime);
             if (s == null) {
-                AppLog.i("tagger: no session for " + f.getName());
+                r.noSession++;
+                AppLog.i("tagger: no session for " + f.getName() + " (photo " + k + ")");
                 // No session: don't advance lastRun past it, retry next time.
                 continue;
             }
             AppLog.i("tagger: session " + s.displayName + " electronic=" + s.electronic);
-            boolean[] counted = new boolean[1];
-            log.countPhoto(mtime, counted);
+            log.countPhotoIn(s);
             if (s.electronic) {
                 r.skippedElectronic++;
                 p.edit().putBoolean(key, true).commit();
@@ -121,7 +129,7 @@ final class PhotoTagger {
         p.edit().putLong("tag_last_run", newest).commit();
         r.millis = System.currentTimeMillis() - t0;
         AppLog.i("tagger: done tagged=" + r.tagged + " already=" + r.alreadyTagged
-                + " failed=" + r.failed + " skippedEl=" + r.skippedElectronic
+                + " failed=" + r.failed + " skippedEl=" + r.skippedElectronic + " noSession=" + r.noSession
                 + " ms=" + r.millis);
         return r;
     }
@@ -141,13 +149,7 @@ final class PhotoTagger {
         List<File> out = new ArrayList<File>();
         // Sony A7 II: /DCIM/100MSDCF on the card. Try several roots.
         String ext = android.os.Environment.getExternalStorageDirectory().getAbsolutePath();
-        String[] roots = {
-            ext + "/DCIM",
-            "/mnt/sdcard/DCIM",
-            "/sdcard/DCIM",
-            "/mnt/sdcard/external_sd/DCIM",
-            "/Removable/MicroSD/DCIM",
-        };
+        String[] roots = CardSeq.roots(ext);
         for (String root : roots) {
             File d = new File(root);
             boolean ok = d.isDirectory();

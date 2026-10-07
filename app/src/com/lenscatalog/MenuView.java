@@ -153,7 +153,7 @@ final class MenuView extends View {
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
             A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14,
-            A_LOG = 15, A_AUTOEXIT = 16;
+            A_LOG = 15, A_AUTOEXIT = 16, A_DUMP = 17;
 
     private final Typeface regular, medium;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -262,6 +262,7 @@ final class MenuView extends View {
         title = Text.get("diagnostics");
         rows.clear();
         top = 0;
+        rows.add(new Row(Text.get("store_dump"), "", A_DUMP).icon(I_DOC));
         rows.add(new Row(Text.get("app_version"), "LensCatalog " + version, A_NOTHING));
         String n = String.valueOf(catalog.lenses.size());
         rows.add(new Row(Text.get("catalog_src"),
@@ -434,6 +435,11 @@ final class MenuView extends View {
 
     /** Result window: a mark, a title and labelled lines; debug text stays in logcat. */
     private void showResult(int kind, String title, List<String[]> lines, String note) {
+        showResult(kind, title, lines, note, true);
+    }
+
+    /** mayExit: false for results that are no step of shooting (a store dump), which never auto-exit. */
+    private void showResult(int kind, String title, List<String[]> lines, String note, boolean mayExit) {
         state = ST_TOAST;
         resKind = kind;
         toastTitle = title;
@@ -443,7 +449,7 @@ final class MenuView extends View {
         // Auto-exit is configurable (Berto 2026-10-06): if disabled, the
         // result stays on screen until the user presses MENU. Work still
         // under way (tagging) never exits: its result does.
-        if (kind != RES_BUSY && store != null && store.autoExit()) {
+        if (mayExit && kind != RES_BUSY && store != null && store.autoExit()) {
             toastStart = System.currentTimeMillis();
             toastUntil = toastStart + TOAST_MS;
             handler.postDelayed(exitLater, TOAST_MS);
@@ -484,7 +490,9 @@ final class MenuView extends View {
     void onKey(int k, int repeat) {
         if (state == ST_TOAST) {
             // If auto-exit is off, MENU (or OK) goes back to home; otherwise let it finish.
-            if ((k == Keys.MENU || k == Keys.ENTER) && store != null && !store.autoExit()) {
+            // (a result with no count-down, such as a store dump, closes with MENU too)
+            boolean closes = store != null && (!store.autoExit() || (toastUntil == 0 && resKind != RES_BUSY));
+            if ((k == Keys.MENU || k == Keys.ENTER) && closes) {
                 showHome();
                 return;
             }
@@ -623,6 +631,7 @@ final class MenuView extends View {
             case A_DIAG: showDiag(); break;
             case A_TAG: tagPhotos(); break;
             case A_LOG: showLog(); break;
+            case A_DUMP: dumpStore(); break;
             case A_AUTOEXIT:
                 store.setAutoExit(!store.autoExit());
                 showHomeAt(r.key);
@@ -672,6 +681,15 @@ final class MenuView extends View {
         }
     }
 
+    /** What SteadyShot is set to: the nearest focal it offers, and the lens's own when they differ. */
+    private String ibisText() {
+        int ibis = Sony.ibisFocal(chosenFocal);
+        String s = ibis + " " + Text.get("mm");
+        if (ibis != chosenFocal) s += " " + Text.fmt("ibis_from", String.valueOf(chosenFocal));
+        if (lens != null && lens.isZoom()) s += " " + Text.get("wide_end");
+        return s;
+    }
+
     private String manualModel() {
         return manFocal + "mm" + (manApIdx == 0 ? "" : " f/" + APS[manApIdx]);
     }
@@ -716,6 +734,38 @@ final class MenuView extends View {
     /** Where MENU from ST_CONFIRM returns: one of ST_HOME/ST_FAVORITES/ST_MODELS/ST_MANUAL. */
     private int confirmBack = ST_HOME;
 
+    /** The camera's settings store to the card (StoreDump), on a worker thread. */
+    private void dumpStore() {
+        if (!NativeStore.available()) {
+            List<String[]> l = new ArrayList<String[]>();
+            showResult(RES_WARN, Text.get("store_dump"), l, Text.get("store_camera_only"), false);
+            return;
+        }
+        showResult(RES_BUSY, Text.get("store_dumping"), new ArrayList<String[]>(), null);
+        final String header = sony.steadyShot();
+        new Thread(new Runnable() {
+            public void run() {
+                final StoreDump.Result r = StoreDump.dump(new java.io.File(
+                        android.os.Environment.getExternalStorageDirectory(), "AINTFILM"), header);
+                post(new Runnable() {
+                    public void run() {
+                        List<String[]> l = new ArrayList<String[]>();
+                        if (r.error == null) {
+                            l.add(new String[] { Text.get("store_file"), "/AINTFILM/" + r.file, "ok" });
+                            l.add(new String[] { Text.get("store_slots"), String.valueOf(r.slots), "" });
+                        } else {
+                            l.add(new String[] { Text.get("res_failed"), r.error, "bad" });
+                        }
+                        l.add(new String[] { Text.get("tag_time"), r.millis + " ms", "" });
+                        if (header.length() > 0) l.add(new String[] { "SteadyShot", header.replace("SteadyShot ", ""), "" });
+                        showResult(r.error == null ? RES_OK : RES_WARN, Text.get("store_dump"), l,
+                                r.error == null ? Text.get("store_hint") : null, false);
+                    }
+                });
+            }
+        }).start();
+    }
+
     /** Run the post-capture EXIF tagger on a worker thread. */
     private void tagPhotos() {
         List<String[]> wait = new ArrayList<String[]>();
@@ -734,9 +784,12 @@ final class MenuView extends View {
                                     String.valueOf(r.skippedElectronic), "" });
                         lines.add(new String[] { Text.get("tag_failed"), String.valueOf(r.failed),
                                 r.failed > 0 ? "bad" : "" });
+                        if (r.noSession > 0)
+                            lines.add(new String[] { Text.get("tag_nosession"), String.valueOf(r.noSession), "warn" });
                         lines.add(new String[] { Text.get("tag_time"), r.millis + " ms", "" });
-                        showResult(r.failed > 0 ? RES_WARN : RES_OK, Text.get("tag_done"), lines,
-                                r.failed > 0 ? Text.get("tag_failed_hint") : null);
+                        showResult(r.failed > 0 || (r.tagged == 0 && r.noSession > 0) ? RES_WARN : RES_OK,
+                                Text.get("tag_done"), lines, r.failed > 0 ? Text.get("tag_failed_hint")
+                                : r.noSession > 0 ? Text.get("tag_nosession_hint") : null);
                     }
                 });
             }
@@ -757,16 +810,18 @@ final class MenuView extends View {
         // session has no focal (0): the tagger then leaves FocalLength alone,
         // as the pre-capture EXIF does.
         if (lensLog != null) {
-            lensLog.startSession(lens.id, lens.displayName(), zoom ? 0 : chosenFocal, ap, false);
+            lensLog.startSession(lens.id, lens.displayName(), zoom ? 0 : chosenFocal, ap, false,
+                    CardSeq.next(android.os.Environment.getExternalStorageDirectory().getAbsolutePath()));
         }
         boolean sim = !sony.isCamera();
-        String ibis = chosenFocal + " " + Text.get("mm")
-                + (zoom ? " " + Text.get("wide_end") : "");
+        String ibis = ibisText();
         List<String[]> lines = new ArrayList<String[]>();
         lines.add(new String[] { Text.get("res_lens"), lens.displayName(), "" });
         boolean ibisOk = sim || done.indexOf("IBIS=") >= 0;
         lines.add(new String[] { Text.get("summary_ibis"),
                 ibisOk ? ibis : ibis + " · " + Text.get("res_failed"), ibisOk ? "" : "bad" });
+        if (done.indexOf("IBISOFF") >= 0)
+            lines.add(new String[] { "SteadyShot", Text.get("ibis_off"), "warn" });
         if (sim) lines.add(new String[] { Text.get("summary_exif"), Text.get("res_sim"), "" });
         else if (done.indexOf("EXIF=ok") >= 0) lines.add(new String[] { Text.get("summary_exif"), Text.get("res_ok"), "ok" });
         else lines.add(new String[] { Text.get("summary_exif"), Text.get("res_unsupported"), "warn" });
@@ -1252,7 +1307,7 @@ final class MenuView extends View {
             else if (state == ST_FAVORITES || state == ST_MODELS) drawLensRow(c, r, s, y, h, right);
             else if (state == ST_LCCORR && r.index >= 0) drawLcRow(c, r, s, y, h, right);
             else if (state == ST_LOG) drawLogRow(c, r, s, y, h, right);
-            else if (state == ST_DIAG) drawDiagRow(c, r, s, y, h, right);
+            else if (state == ST_DIAG && r.action == A_NOTHING) drawDiagRow(c, r, s, y, h, right);
             else drawMenuRow(c, r, s, y, h, right);
             // the three groups of the correction editor: shading, colour fringes, distortion
             if (state == ST_LCCORR && (r.index == 4 || r.index == 6 || r.index == 8) && sel != i && sel != i + 1)
@@ -1511,7 +1566,7 @@ final class MenuView extends View {
         font(medium, T_SMALL, TEXT3);
         text(c, Text.get("summary_ibis"), x0 + pad, sy, -1);
         font(regular, 18, TEXT);
-        text(c, fit(chosenFocal + " " + Text.get("mm") + (zoom ? " " + Text.get("wide_end") : ""), x1 - pad - vx),
+        text(c, fit(ibisText(), x1 - pad - vx),
                 vx, sy, -1);
         sy += 27;
         font(medium, T_SMALL, TEXT3);
