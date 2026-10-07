@@ -52,7 +52,7 @@ start() {
 }
 focused() { adb_ shell dumpsys window windows | tr -d '\r' | grep -E "mCurrentFocus" | grep -q "$1"; }
 # the shutter: a camera-like JPEG written now, so it carries the time it was "taken"
-shoot() { adb_ shell "cat $CARD/LCSIM/CAMERA.JPG > $DCIM/$1"; say "shot $1"; }
+shoot() { adb_ shell "cat $CARD/LCSIM/CAMERA.${1##*.} > $DCIM/$1"; say "shot $1"; }
 pref() { adb_ shell cat /data/data/$PKG/shared_prefs/lenscatalog.xml | tr -d '\r'; }
 has_pref() { pref | grep -qF -- "$1"; }
 wait_log() { for _ in $(seq 1 "${2:-120}"); do logged "$1" && return 0; sleep 1; done; return 1; }
@@ -71,6 +71,10 @@ python3 "$ROOT/app/test/exif_fixtures.py" "$OUT/fixtures"
 adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json" >/dev/null 2>&1
 adb_ shell "mkdir $CARD/DCIM; mkdir $DCIM; mkdir $CARD/LCSIM; mkdir $CARD/AINTFILM; mkdir $CARD/AINTFILM/SIM" >/dev/null 2>&1
 adb_ push "$OUT/fixtures/sony.jpg" $CARD/LCSIM/CAMERA.JPG >/dev/null 2>&1
+# the raw file of a RAW+JPEG shot: LC_ARW=<a real .ARW>, else the fixture's outline of one
+ARW="${LC_ARW:-$OUT/fixtures/sony.arw}"
+say "raw file for the shots: $ARW"
+adb_ push "$ARW" $CARD/LCSIM/CAMERA.ARW >/dev/null 2>&1
 
 # ------------------------------------------------------------------ a prime, starred, with correction
 say "1. Home, auto-exit off (so the results stay up for their screenshots)"
@@ -97,7 +101,7 @@ shot 08-aplicado
 check "IBIS 58 mm" logged "SIM setAntiHandBlurFocalLength(58)"
 check "EXIF lensName + focal 58" logged 'lensName="Helios 44 58mm 1:2", focal=58/1'
 check "correction ON with shading-w=3, chroma-r=-2" logged 'shading-w=3 shading-wm=0 shading-cr=0 shading-cb=0 shading-cm=0 chroma-r=-2'
-sleep 3; shoot DSC00001.JPG; sleep 1; shoot DSC00002.JPG
+sleep 3; shoot DSC00001.JPG; shoot DSC00001.ARW; sleep 1; shoot DSC00002.JPG
 
 # ------------------------------------------------------------------ a zoom
 say "3. Last used on home; Canon EF 100-200mm f/4.5A (a zoom)"
@@ -131,8 +135,30 @@ key menu enter
 wait_log "tagger: done" 120 || true
 sleep 1
 shot 15-etiquetado
-check "tagger: 4 tagged, 0 failed" logged "tagger: done tagged=4 already=0 failed=0"
+check "tagger: 5 tagged (4 JPEG + 1 ARW), 0 failed" logged "tagger: done tagged=5 already=0 failed=0"
+check "the ARW tagged in place and its sidecar written" logged "tagger: raw DSC00001.ARW exif=ok sidecar=DSC00001.XMP"
 for n in 1 2 3 4; do adb_ pull $DCIM/DSC0000$n.JPG "$OUT/photos/DSC0000$n.JPG" >/dev/null 2>&1; done
+adb_ pull $DCIM/DSC00001.ARW "$OUT/photos/DSC00001.ARW" >/dev/null 2>&1
+adb_ pull $DCIM/DSC00001.XMP "$OUT/photos/DSC00001.XMP" >/dev/null 2>&1
+if command -v exiftool >/dev/null; then
+  python3 - "$OUT/photos" "$ARW" <<'PY' || fails=$((fails + 1))
+import json, subprocess, sys
+d, orig = sys.argv[1], sys.argv[2]
+def tags(p):
+    return json.loads(subprocess.run(["exiftool", "-j", "-G1", "-n", p], capture_output=True, text=True).stdout)[0]
+a, b, x = tags(orig), tags(d + "/DSC00001.ARW"), tags(d + "/DSC00001.XMP")
+o, n = open(orig, "rb").read(), open(d + "/DSC00001.ARW", "rb").read()
+moved = [i for i in range(len(o)) if o[i] != n[i]]
+ok = (b.get("ExifIFD:LensModel") == "Helios 44 58mm 1:2" and b.get("ExifIFD:FocalLength") == 58
+      and b.get("ExifIFD:FNumber") == 2 and moved and moved[-1] - moved[0] < 4
+      and all(b.get(k) == a.get(k) for k in ("ExifIFD:ISO", "ExifIFD:ExposureTime", "ExifIFD:DateTimeOriginal"))
+      and x.get("XMP-exifEX:LensModel") == "Helios 44 58mm 1:2" and x.get("XMP-exif:FocalLength") == 58)
+print("  %s   DSC00001.ARW: LensModel=%r FocalLength=%s FNumber=%s, %d camera bytes changed (the Exif pointer); "
+      "DSC00001.XMP: %r" % ("ok" if ok else "FAIL", b.get("ExifIFD:LensModel"), b.get("ExifIFD:FocalLength"),
+                            b.get("ExifIFD:FNumber"), len(moved), x.get("XMP-exifEX:LensModel")))
+sys.exit(0 if ok else 1)
+PY
+fi
 if command -v exiftool >/dev/null; then
   python3 - "$OUT/photos" "$OUT/fixtures/sony.jpg" <<'PY' || fails=$((fails + 1))
 import json, subprocess, sys
