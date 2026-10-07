@@ -66,7 +66,7 @@ final class Sony {
      * (dumb adapter), null when unknown (simulator: treated as none).
      */
     String lensName() {
-        if (!isCamera()) return "";
+        if (!isCamera()) return simLensName();
         try {
             Object info = cameraEx.getClass().getMethod("getLensInfo").invoke(cameraEx);
             if (info == null) return "";
@@ -74,6 +74,29 @@ final class Sony {
             return name == null ? "" : name;
         } catch (Throwable t) {
             e("getLensInfo", t);
+            return "";
+        }
+    }
+
+    /**
+     * Simulator only (no Sony framework): an electronic lens is "mounted" when
+     * /AINTFILM/SIM/LENS.TXT on the card holds its name, so the electronic-lens
+     * screen and session can be tested off the camera. Never read on the camera.
+     */
+    private String simLensName() {
+        try {
+            java.io.File f = new java.io.File(android.os.Environment.getExternalStorageDirectory(),
+                    "AINTFILM/SIM/LENS.TXT");
+            if (!f.isFile() || f.length() > 256) return "";
+            java.io.FileInputStream in = new java.io.FileInputStream(f);
+            byte[] b = new byte[(int) f.length()];
+            int n = 0, r;
+            while (n < b.length && (r = in.read(b, n, b.length - n)) > 0) n += r;
+            in.close();
+            String name = new String(b, 0, n, "UTF-8").trim();
+            if (name.length() > 0) i("SIM electronic lens from LENS.TXT: " + name);
+            return name;
+        } catch (Throwable t) {
             return "";
         }
     }
