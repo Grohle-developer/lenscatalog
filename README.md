@@ -31,8 +31,9 @@ store. ~130 KB APK, v1-signed.
   `setLensCorrection` / `setLensCorrectionLevel` when you apply the lens.
   Stored per lens on the camera; ranges are queried live from the framework.
 - **Write EXIF to photos**: after shooting, tags the new photos on the card
-  with the lens that was applied when each was taken (`LensModel`, plus
-  `FocalLength` for primes and `FNumber`):
+  with the lens that was applied when each was taken (`LensMake`, `LensModel`,
+  `LensSpecification`, `FNumber`, `MaxApertureValue`, plus `FocalLength` for
+  primes), matched by the camera's own photo numbering:
   - **JPEG**: in the Exif IFD, leaving the camera's own EXIF, thumbnail and
     file time untouched.
   - **RAW (ARW)**: in the file's Exif IFD, in place — a new Exif IFD is
@@ -47,8 +48,10 @@ store. ~130 KB APK, v1-signed.
   where you are, drawn marks (the camera's font has no symbols), a legend of
   the keys on every screen, and colours exactly on the camera's 4-bit levels.
   Text is the bundled Roboto.
-- Bring your own catalog: drop a `lenses.json` in `/DCIM/LENSES/` on the memory
-  card and the app prefers it over the built-in one.
+- Bring your own catalog: drop a `LENSES.JSN` (the card holds 8.3 names only;
+  a `lenses.json` copied from a computer shows there as `LENSES~1.JSO`, which
+  is accepted too) in `/DCIM/LENSES/` on the memory card and the app prefers
+  it over the built-in one.
 
 ## Requirements
 

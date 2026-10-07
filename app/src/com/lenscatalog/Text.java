@@ -116,6 +116,7 @@ final class Text {
         { "catalog_apk", "{0} objetivos · interno", "{0} lenses · built-in" },
         { "catalog_card", "{0} objetivos · tarjeta", "{0} lenses · memory card" },
         { "app_version", "Versión", "Version" },
+        { "camera_clock", "Reloj de la cámara", "Camera clock" },
         // the legend: what the keys do on this screen
         { "lg_choose", "Elegir", "Choose" },
         { "lg_page", "Página", "Page" },

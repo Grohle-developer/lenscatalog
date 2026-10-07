@@ -81,7 +81,7 @@ clock1970() { adb_ shell date -s 19700101.000500 >/dev/null 2>&1; }
 clock1970
 rm -rf "$OUT/shots" "$OUT/photos" && mkdir -p "$OUT/shots" "$OUT/photos" "$OUT/fixtures"
 python3 "$ROOT/app/test/exif_fixtures.py" "$OUT/fixtures"
-adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json; rm $CARD/AINTFILM/AINTFILM.LOG" >/dev/null 2>&1
+adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json; rm $CARD/DCIM/LENSES/LENSES.JSN; rm $CARD/AINTFILM/AINTFILM.LOG" >/dev/null 2>&1
 adb_ shell "mkdir $CARD/DCIM; mkdir $DCIM; mkdir $CARD/LCSIM; mkdir $CARD/AINTFILM; mkdir $CARD/AINTFILM/SIM" >/dev/null 2>&1
 cp "$OUT/fixtures/sony.jpg" "$OUT/fixtures/CAMERA.JPG"
 # the raw file of a RAW+JPEG shot: LC_ARW=<a real .ARW>, else the fixture's outline of one
@@ -151,11 +151,12 @@ shot 15-etiquetado
 check "tagger: 5 tagged (4 JPEG + 1 ARW), 0 failed, though the app's clock says 1970" logged "tagger: done tagged=5 already=0 failed=0 skippedEl=0 noSession=0"
 card_log() { adb_ shell cat $CARD/AINTFILM/AINTFILM.LOG | tr -d '\r'; }
 # (the applies and the tagging of steps 2-5: the log up to the first "tagger: done")
+# (stamped "boot+HH:MM:SS": the app knows Android's clock is unset, and the simulator has no camera clock)
 applied_in_1970() {
   local l; l="$(card_log | awk '{print} /tagger: done/ {exit}' | grep -E 'setAntiHandBlurFocalLength|tagger: start')"
-  [ -n "$l" ] && ! echo "$l" | grep -qv '^1970-'
+  [ -n "$l" ] && ! echo "$l" | grep -qvE '^(1970-|boot\+)'
 }
-check "the app's clock said 1970 at every Apply and at Write EXIF (as on the camera)" applied_in_1970
+check "the app's clock said 1970 at every Apply and at Write EXIF (as on the camera), logged as boot+" applied_in_1970
 check "the ARW tagged in place and its sidecar written" logged "tagger: raw DSC00001.ARW exif=ok sidecar=DSC00001.XMP"
 for n in 1 2 3 4; do adb_ pull $DCIM/DSC0000$n.JPG "$OUT/photos/DSC0000$n.JPG" >/dev/null 2>&1; done
 adb_ pull $DCIM/DSC00001.ARW "$OUT/photos/DSC00001.ARW" >/dev/null 2>&1
@@ -169,13 +170,14 @@ def tags(p):
 a, b, x = tags(orig), tags(d + "/DSC00001.ARW"), tags(d + "/DSC00001.XMP")
 o, n = open(orig, "rb").read(), open(d + "/DSC00001.ARW", "rb").read()
 moved = [i for i in range(len(o)) if o[i] != n[i]]
-ok = (b.get("ExifIFD:LensModel") == "Helios 44 58mm 1:2" and b.get("ExifIFD:FocalLength") == 58
-      and b.get("ExifIFD:FNumber") == 2 and moved and moved[-1] - moved[0] < 4
+ok = (b.get("ExifIFD:LensModel") == "Helios 44 58mm 1:2" and b.get("ExifIFD:LensMake") == "Helios"
+      and b.get("ExifIFD:FocalLength") == 58 and b.get("ExifIFD:FNumber") == 2 and b.get("ExifIFD:LensInfo") == "58 58 2 2"
+      and moved and moved[-1] - moved[0] < 4
       and all(b.get(k) == a.get(k) for k in ("ExifIFD:ISO", "ExifIFD:ExposureTime", "ExifIFD:DateTimeOriginal"))
       and x.get("XMP-exifEX:LensModel") == "Helios 44 58mm 1:2" and x.get("XMP-exif:FocalLength") == 58)
-print("  %s   DSC00001.ARW: LensModel=%r FocalLength=%s FNumber=%s, %d camera bytes changed (the Exif pointer); "
-      "DSC00001.XMP: %r" % ("ok" if ok else "FAIL", b.get("ExifIFD:LensModel"), b.get("ExifIFD:FocalLength"),
-                            b.get("ExifIFD:FNumber"), len(moved), x.get("XMP-exifEX:LensModel")))
+print("  %s   DSC00001.ARW: LensMake=%r LensModel=%r FocalLength=%s FNumber=%s LensInfo=%r, %d camera bytes changed "
+      "(the Exif pointer); DSC00001.XMP: %r" % ("ok" if ok else "FAIL", b.get("ExifIFD:LensMake"), b.get("ExifIFD:LensModel"),
+      b.get("ExifIFD:FocalLength"), b.get("ExifIFD:FNumber"), b.get("ExifIFD:LensInfo"), len(moved), x.get("XMP-exifEX:LensModel")))
 sys.exit(0 if ok else 1)
 PY
 fi
@@ -195,10 +197,11 @@ for name, (lens, focal, f) in sorted(want.items()):
     got = (t.get("ExifIFD:LensModel"), t.get("ExifIFD:FocalLength"), t.get("ExifIFD:FNumber"))
     kept = all(t.get(k) == o.get(k) for k in ("ExifIFD:ISO", "ExifIFD:ExposureTime", "ExifIFD:DateTimeOriginal",
                                               "IFD0:Make", "IFD0:Model", "IFD1:ThumbnailLength"))
-    ok = got[0] == lens and got[1] == focal and abs((got[2] or 0) - f) < 1e-6 and kept
+    make = lens.split(" ")[0] if not lens.startswith("Manual") else None
+    ok = got[0] == lens and got[1] == focal and abs((got[2] or 0) - f) < 1e-6 and kept and t.get("ExifIFD:LensMake") == make
     bad += not ok
-    print("  %s   %s: LensModel=%r FocalLength=%s FNumber=%s, camera EXIF kept=%s"
-          % ("ok" if ok else "FAIL", name, got[0], got[1], got[2], kept))
+    print("  %s   %s: LensMake=%r LensModel=%r FocalLength=%s FNumber=%s, camera EXIF kept=%s"
+          % ("ok" if ok else "FAIL", name, t.get("ExifIFD:LensMake"), got[0], got[1], got[2], kept))
 sys.exit(1 if bad else 0)
 PY
 else
@@ -255,14 +258,15 @@ cat > "$OUT/lenses.json" <<'JSON'
  {"id":"taller-tair-11a","model":"Tair-11A 135mm f/2.8","mount":"M42","type":"prime","max_aperture":2.8,"focal":135}]}]}
 JSON
 adb_ shell mkdir $CARD/DCIM/LENSES >/dev/null 2>&1
-adb_ push "$OUT/lenses.json" $CARD/DCIM/LENSES/lenses.json >/dev/null 2>&1
+# as LENSES.JSN: the camera's card holds 8.3 names only (a computer's lenses.json shows there as LENSES~1.JSO)
+adb_ push "$OUT/lenses.json" $CARD/DCIM/LENSES/LENSES.JSN >/dev/null 2>&1
 start
 key down down
 shot 23-catalogo-tarjeta
 key up up up up up enter
 shot 24-diagnostico-tarjeta
 check "the card's catalogue is the one in use" logged "catalogue: card"
-adb_ shell rm $CARD/DCIM/LENSES/lenses.json
+adb_ shell rm $CARD/DCIM/LENSES/LENSES.JSN
 
 # ------------------------------------------------------------------ the wheel, a page, auto-exit
 say "10. Control wheel and page jump in a long list; manual focal by holding the key"
@@ -285,6 +289,16 @@ key up enter down down down enter enter     # auto-exit ON, then Last used -> Ap
 sleep 4
 check "auto-exit: back to the camera after Apply" focused launcher
 check "no crash" no_crash
+
+# Every file the app left on the card has an 8.3 upper-case name: the camera's card
+# takes no other kind (0.3.2's DSC02073.JPG.exiftmp failed there). The simulator's
+# card is vfat, so a long name would have been created, and shows up here.
+say "12. The names the app left on the card"
+card_names() { adb_ shell "ls -R $CARD/DCIM $CARD/AINTFILM" | tr -d '\r' | grep -vE '^(/|$)'; }
+card_names | sed 's/^/  card: /' | head -40
+not83() { card_names | grep -vE '^[A-Z0-9_~-]{1,8}(\.[A-Z0-9_~-]{1,3})?$'; }
+check "every name on the card is 8.3, upper case" test -z "$(not83)"
+not83 | sed 's/^/  NOT 8.3: /'
 
 say "screens in $OUT/shots, photographs in $OUT/photos"
 if [ "$fails" -eq 0 ]; then say "ALL CHECKS PASSED"; else say "$fails CHECK(S) FAILED"; fi

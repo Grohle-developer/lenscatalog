@@ -267,6 +267,9 @@ final class MenuView extends View {
         String n = String.valueOf(catalog.lenses.size());
         rows.add(new Row(Text.get("catalog_src"),
                 Text.fmt(catalog.userCopy ? "catalog_card" : "catalog_apk", n), A_NOTHING));
+        Row clock = new Row(Text.get("camera_clock"), AppLog.clockText(), A_NOTHING);
+        clock.status = AppLog.hasCameraClock() ? 1 : 3;
+        rows.add(clock);
         for (String line : sony.diagnose()) {
             // "label: value" or "label=value"
             int c = line.indexOf(": "), e = line.indexOf('=');
@@ -811,7 +814,8 @@ final class MenuView extends View {
         // as the pre-capture EXIF does.
         if (lensLog != null) {
             lensLog.startSession(lens.id, lens.displayName(), zoom ? 0 : chosenFocal, ap, false,
-                    CardSeq.next(android.os.Environment.getExternalStorageDirectory().getAbsolutePath()));
+                    CardSeq.next(android.os.Environment.getExternalStorageDirectory().getAbsolutePath()),
+                    lens.manual ? "" : lens.brand, zoom ? lens.focalMin : chosenFocal, zoom ? lens.focalMax : chosenFocal);
         }
         boolean sim = !sony.isCamera();
         String ibis = ibisText();
@@ -1444,10 +1448,14 @@ final class MenuView extends View {
         }
         float cy = y + h / 2f;
         String line = r.label, time = "", msg = line;
-        // "yyyy-MM-dd HH:mm:ss.SSS  message"
-        if (line.length() > 25 && line.charAt(4) == '-' && line.charAt(13) == ':') {
-            time = line.substring(11, 19);
-            msg = line.substring(23).trim();
+        // "yyyy-MM-dd HH:mm:ss.SSS  message", or "boot+HH:MM:SS.mmm  message"
+        // (the time since power-on, while the camera's clock is not known)
+        int sep = line.indexOf("  ");
+        if (sep > 0) {
+            String stamp = line.substring(0, sep);
+            msg = line.substring(sep + 2).trim();
+            if (stamp.startsWith("boot+") && stamp.length() >= 13) time = "+" + stamp.substring(5, 13);
+            else if (stamp.length() >= 19 && stamp.charAt(10) == ' ') time = stamp.substring(11, 19);
         }
         float x = 20;
         if (time.length() > 0) {

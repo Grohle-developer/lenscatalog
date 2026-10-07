@@ -12,10 +12,12 @@ import java.util.List;
 
 /**
  * Minimal pure-Java EXIF writer for JPEGs and Sony's ARW raw files (API 10
- * has no LensModel tag).
- * Sets, in the Exif sub-IFD where the standard puts them:
- *   0xA434 LensModel (ASCII), 0x920A FocalLength (RATIONAL, only when
- *   focalMm > 0), 0x829D FNumber (RATIONAL, only when fNumber > 0).
+ * has no LensModel tag). Sets, in the Exif sub-IFD where the standard puts
+ * them, what the camera cannot know about an adapted lens:
+ *   0xA434 LensModel (ASCII), 0xA433 LensMake (ASCII, when known),
+ *   0x920A FocalLength (RATIONAL, primes only), 0x829D FNumber (RATIONAL),
+ *   0x9205 MaxApertureValue (RATIONAL, APEX, from the f-number) and
+ *   0xA432 LensSpecification (4 RATIONALs: the focal range and its f-number).
  *
  * The camera's own EXIF is kept whole. Its TIFF block is never re-laid out:
  * the bytes stay where they are, so every offset in it (the Exif IFD's values,
@@ -27,100 +29,187 @@ import java.util.List;
  * bytes. (0.2.x rebuilt IFD0 from scratch: it lost the whole Exif IFD -
  * exposure, ISO, dates - and the thumbnail, and put the lens tags in IFD0.)
  *
- * If the JPEG has no EXIF APP1 segment, one is created. Other segments are
- * preserved byte-for-byte. Returns null on success, an error string
- * otherwise. Nothing here throws. No android.* import: tested on a bare JDK.
+ * A JPEG is rewritten through a temporary file next to it, streamed: only its
+ * header segments are held in memory, never the image (the camera's heap is
+ * small). The temporary file has an 8.3 name (DSC02073.TMP): the camera's card
+ * takes no other kind, and 0.3.2's DSC02073.JPG.exiftmp could not be created
+ * there. A raw file is written in place (writeLensExifRaw). If the JPEG has no
+ * EXIF APP1 segment, one is created. Other segments are preserved
+ * byte-for-byte. Returns null on success, an error string otherwise. Nothing
+ * here throws. No android.* import: tested on a bare JDK.
  */
 final class ExifWriter {
     private ExifWriter() {}
 
+    /**
+     * What is written about a lens. make may be "" (a lens entered by hand
+     * has no maker); focalMm 0 leaves the camera's FocalLength alone (a zoom:
+     * a range is not a rational); focalMin/focalMax 0 writes no
+     * LensSpecification; fNumber 0 writes no FNumber or MaxApertureValue.
+     */
+    static final class Lens {
+        final String make, model;
+        final int focalMm;
+        final double fNumber;
+        final int focalMin, focalMax;
+
+        Lens(String make, String model, int focalMm, double fNumber, int focalMin, int focalMax) {
+            this.make = make == null ? "" : make.trim();
+            this.model = model == null ? "" : model;
+            this.focalMm = focalMm;
+            this.fNumber = fNumber;
+            this.focalMin = focalMin;
+            this.focalMax = focalMax;
+        }
+
+        /** A prime (or a lens of unknown range): the focal length is the range. */
+        Lens(String model, int focalMm, double fNumber) {
+            this("", model, focalMm, fNumber, focalMm, focalMm);
+        }
+    }
+
     private static final int TAG_EXIF_IFD = 0x8769;
-    private static final int TAG_EXIF_VERSION = 0x9000;
-    private static final int TAG_LENS_MODEL = 0xA434;
-    private static final int TAG_FOCAL_LENGTH = 0x920A;
     private static final int TAG_FNUMBER = 0x829D;
+    private static final int TAG_EXIF_VERSION = 0x9000;
+    private static final int TAG_FOCAL_LENGTH = 0x920A;
+    private static final int TAG_MAX_APERTURE = 0x9205;
+    private static final int TAG_LENS_SPEC = 0xA432;
+    private static final int TAG_LENS_MAKE = 0xA433;
+    private static final int TAG_LENS_MODEL = 0xA434;
     private static final int TYPE_ASCII = 2, TYPE_LONG = 4, TYPE_RATIONAL = 5, TYPE_UNDEFINED = 7;
     /** An APP1 segment's length field counts itself: 65535 - 2 bytes of payload at most. */
     private static final int MAX_APP1_PAYLOAD = 65533;
+    /** The marker segments before the image data are read whole; one of this size is not a camera's. */
+    private static final int MAX_HEADER = 4 * 1024 * 1024;
+
+    // ---- JPEG ----
+
+    /** Write lens EXIF into the JPEG at path (a prime, maker unknown). Null = ok. */
+    static String writeLensExif(String path, String lensModel, int focalMm, double fNumber) {
+        return writeLensExif(path, new Lens(lensModel, focalMm, fNumber));
+    }
 
     /** Write lens EXIF into the JPEG at path. Null = ok. */
-    static String writeLensExif(String path, String lensModel, int focalMm,
-                                double fNumber) {
+    static String writeLensExif(String path, Lens lens) {
+        RandomAccessFile in = null;
+        FileOutputStream out = null;
+        File tmp = null;
         try {
-            byte[] jpeg = readAll(path);
-            if (jpeg == null || jpeg.length < 4) return "unreadable";
-            if (jpeg[0] != (byte) 0xFF || jpeg[1] != (byte) 0xD8) return "not a JPEG";
+            File orig = new File(path);
+            long len = orig.length(), mtime = orig.lastModified();
+            if (len < 4) return "unreadable";
+            in = new RandomAccessFile(orig, "r");
+            byte[] soi = read(in, len, 0, 2);
+            if (soi[0] != (byte) 0xFF || soi[1] != (byte) 0xD8) return "not a JPEG";
 
-            // Find APP1 (Exif) segment, or the position to insert one (after SOI).
-            int app1Pos = -1, app1Len = 0;
-            int pos = 2;
-            while (pos + 4 <= jpeg.length) {
-                if (jpeg[pos] != (byte) 0xFF) break;
-                int marker = jpeg[pos + 1] & 0xFF;
-                if (marker == 0xD8 || marker == 0xD9) { pos += 2; continue; }
+            // Walk the marker segments to the image data (SOS): where the Exif
+            // APP1 is, or where to insert one (right after SOI).
+            long app1Pos = -1, pos = 2;
+            int app1Len = 0;
+            while (pos + 4 <= len && pos < MAX_HEADER) {
+                byte[] h = read(in, len, pos, 4);
+                if (h[0] != (byte) 0xFF) break;
+                int marker = h[1] & 0xFF;
+                if (marker == 0xD8 || marker == 0xD9 || (marker >= 0xD0 && marker <= 0xD7)) { pos += 2; continue; }
                 if (marker == 0xDA) break; // SOS: image data starts
-                int len = ((jpeg[pos + 2] & 0xFF) << 8) | (jpeg[pos + 3] & 0xFF);
-                if (len < 2 || pos + 2 + len > jpeg.length) break;
-                if (marker == 0xE1 && len >= 8
-                        && jpeg[pos + 4] == 'E' && jpeg[pos + 5] == 'x'
-                        && jpeg[pos + 6] == 'i' && jpeg[pos + 7] == 'f'
-                        && jpeg[pos + 8] == 0 && jpeg[pos + 9] == 0) {
-                    app1Pos = pos;
-                    app1Len = len;
-                    break;
+                int segLen = ((h[2] & 0xFF) << 8) | (h[3] & 0xFF);
+                if (segLen < 2 || pos + 2 + segLen > len) break;
+                if (marker == 0xE1 && segLen >= 8) {
+                    byte[] id = read(in, len, pos + 4, 6);
+                    if (id[0] == 'E' && id[1] == 'x' && id[2] == 'i' && id[3] == 'f' && id[4] == 0 && id[5] == 0) {
+                        app1Pos = pos;
+                        app1Len = segLen;
+                        break;
+                    }
                 }
-                pos += 2 + len;
+                pos += 2 + segLen;
             }
 
             // The TIFF block: after the length field and "Exif\0\0".
-            byte[] tiff = app1Pos >= 0 ? subarray(jpeg, app1Pos + 10, app1Len - 8) : emptyTiff();
-            byte[] newTiff = setLensTags(tiff, lensModel, focalMm, fNumber);
+            byte[] tiff = app1Pos >= 0 ? read(in, len, app1Pos + 10, app1Len - 8) : emptyTiff();
+            byte[] newTiff = setLensTags(tiff, lens);
             if (newTiff == null) return "unreadable EXIF";
             int payload = 6 + newTiff.length;
             if (payload > MAX_APP1_PAYLOAD) return "EXIF block full (" + payload + " bytes)";
 
-            ByteArrayOutputStream b = new ByteArrayOutputStream(jpeg.length + newTiff.length + 16);
-            int keepFrom;
+            // The new file: what was before the APP1 (or just SOI), the new
+            // APP1, then the rest of the old file, copied through a buffer.
+            tmp = tempFor(orig);
+            if (tmp.exists() && !tmp.delete()) return "cannot replace " + tmp.getName();
+            out = new FileOutputStream(tmp);
+            long keepFrom;
             if (app1Pos >= 0) {
-                // Replace the APP1 segment.
-                b.write(jpeg, 0, app1Pos);
+                copy(in, 0, app1Pos, out);
                 keepFrom = app1Pos + 2 + app1Len;
             } else {
-                // Insert APP1 right after SOI.
-                b.write(jpeg, 0, 2);
+                out.write(soi);
                 keepFrom = 2;
             }
-            b.write(0xFF); b.write(0xE1);
             int segLen = payload + 2;
-            b.write((segLen >> 8) & 0xFF); b.write(segLen & 0xFF);
-            b.write('E'); b.write('x'); b.write('i'); b.write('f'); b.write(0); b.write(0);
-            b.write(newTiff, 0, newTiff.length);
-            b.write(jpeg, keepFrom, jpeg.length - keepFrom);
-            byte[] out = b.toByteArray();
+            out.write(new byte[] { (byte) 0xFF, (byte) 0xE1, (byte) (segLen >> 8), (byte) segLen,
+                'E', 'x', 'i', 'f', 0, 0 });
+            out.write(newTiff);
+            copy(in, keepFrom, len - keepFrom, out);
+            out.getFD().sync();
+            out.close();
+            out = null;
+            in.close();
+            in = null;
 
-            // Write back atomically-ish: temp file then rename.
-            File orig = new File(path);
-            long mtime = orig.lastModified();
-            File tmp = new File(path + ".exiftmp");
-            FileOutputStream f = new FileOutputStream(tmp);
-            f.write(out);
-            f.close();
+            // Into place: a rename over the original where the card allows it,
+            // else the original removed first, else a copy.
             if (!tmp.renameTo(orig)) {
-                // renameTo can fail across volumes; fall back to copy.
-                FileInputStream in = new FileInputStream(tmp);
-                FileOutputStream o = new FileOutputStream(orig);
-                byte[] buf = new byte[32768];
-                int r;
-                while ((r = in.read(buf)) > 0) o.write(buf, 0, r);
-                in.close(); o.close();
-                tmp.delete();
+                if (!(orig.delete() && tmp.renameTo(orig))) {
+                    FileInputStream ti = new FileInputStream(tmp);
+                    FileOutputStream o = new FileOutputStream(orig);
+                    byte[] buf = new byte[65536];
+                    int r;
+                    while ((r = ti.read(buf)) > 0) o.write(buf, 0, r);
+                    ti.close();
+                    o.close();
+                    tmp.delete();
+                }
             }
-            // The file keeps the time it was taken: the tagger matches photos
-            // to lens sessions by it, and so do the camera and a computer.
+            tmp = null;
+            // The file keeps the time it was taken, for the camera and a computer alike.
             if (mtime > 0) orig.setLastModified(mtime);
             return null;
         } catch (Throwable t) {
             return t.toString();
+        } finally {
+            if (out != null) try { out.close(); } catch (Throwable ignored) { }
+            if (in != null) try { in.close(); } catch (Throwable ignored) { }
+            if (tmp != null) tmp.delete(); // a half-written temporary never stays on the card
+        }
+    }
+
+    /**
+     * The temporary file a JPEG is rewritten through: next to it, with an 8.3
+     * name in upper case (DSC02073.JPG -> DSC02073.TMP), the only kind the
+     * camera's card takes. No camera writes .TMP, so it collides with nothing.
+     */
+    static File tempFor(File photo) {
+        String n = photo.getName();
+        int dot = n.lastIndexOf('.');
+        String base = (dot > 0 ? n.substring(0, dot) : n).toUpperCase();
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < base.length() && b.length() < 8; i++) {
+            char c = base.charAt(i);
+            if ((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_' || c == '-') b.append(c);
+        }
+        if (b.length() == 0) b.append("LENSCAT");
+        return new File(photo.getParentFile(), b + ".TMP");
+    }
+
+    /** n bytes of f from pos, through a buffer. */
+    private static void copy(RandomAccessFile f, long pos, long n, FileOutputStream out) throws Exception {
+        byte[] buf = new byte[65536];
+        f.seek(pos);
+        while (n > 0) {
+            int r = f.read(buf, 0, (int) Math.min(buf.length, n));
+            if (r <= 0) throw new java.io.EOFException("short read at " + pos);
+            out.write(buf, 0, r);
+            n -= r;
         }
     }
 
@@ -131,11 +220,15 @@ final class ExifWriter {
         return new byte[] { 'I', 'I', 42, 0, 8, 0, 0, 0, /* IFD0: */ 0, 0, /* next: */ 0, 0, 0, 0 };
     }
 
+    static byte[] setLensTags(byte[] tiff, String lensModel, int focalMm, double fNumber) {
+        return setLensTags(tiff, new Lens(lensModel, focalMm, fNumber));
+    }
+
     /**
      * The TIFF block with the lens tags set in its Exif IFD; null when the
      * block cannot be read. Everything of the original stays at its offset.
      */
-    static byte[] setLensTags(byte[] tiff, String lensModel, int focalMm, double fNumber) {
+    static byte[] setLensTags(byte[] tiff, Lens lens) {
         try {
             if (tiff == null || tiff.length < 14) return null;
             boolean le;
@@ -170,7 +263,7 @@ final class ExifWriter {
                 if (exifIfd + 2 + n * 12 > tiff.length) return null;
                 for (int i = 0; i < n; i++) {
                     int e = exifIfd + 2 + i * 12;
-                    if (replaced(u16(tiff, e, le), focalMm, fNumber)) continue;
+                    if (replaced(u16(tiff, e, le), lens)) continue;
                     entries.add(subarray(tiff, e, 12));
                 }
             }
@@ -179,7 +272,7 @@ final class ExifWriter {
             out.write(tiff, 0, tiff.length);
             if (out.size() % 2 != 0) out.write(0);
             int exifAt = out.size();
-            byte[] ifd = exifIfd(entries, exifAt, lensModel, focalMm, fNumber, le);
+            byte[] ifd = exifIfd(entries, exifAt, lens, le);
             out.write(ifd, 0, ifd.length);
 
             byte[] res;
@@ -207,9 +300,15 @@ final class ExifWriter {
     }
 
     /** Whether an old Exif IFD entry gives way to one written here. */
-    private static boolean replaced(int tag, int focalMm, double fNumber) {
-        return tag == TAG_LENS_MODEL || (focalMm > 0 && tag == TAG_FOCAL_LENGTH)
-                || (fNumber > 0 && tag == TAG_FNUMBER);
+    private static boolean replaced(int tag, Lens l) {
+        switch (tag) {
+            case TAG_LENS_MODEL: return true;
+            case TAG_LENS_MAKE: return l.make.length() > 0;
+            case TAG_FOCAL_LENGTH: return l.focalMm > 0;
+            case TAG_FNUMBER: case TAG_MAX_APERTURE: return l.fNumber > 0;
+            case TAG_LENS_SPEC: return l.focalMin > 0 && l.focalMax > 0;
+            default: return false;
+        }
     }
 
     /**
@@ -217,30 +316,40 @@ final class ExifWriter {
      * old ones kept, verbatim) plus the lens tags, sorted by tag, then the
      * values of the lens tags. Even length, so what follows stays aligned.
      */
-    private static byte[] exifIfd(List<byte[]> entries, int at, String lensModel, int focalMm,
-            double fNumber, boolean le) throws Exception {
-        boolean writeFocal = focalMm > 0, writeF = fNumber > 0;
-        byte[] lensBytes = (lensModel + "\0").getBytes("UTF-8");
+    private static byte[] exifIfd(List<byte[]> entries, int at, Lens l, boolean le) throws Exception {
         List<byte[]> all = new ArrayList<byte[]>(entries);
-        int count = all.size() + 1 + (writeFocal ? 1 : 0) + (writeF ? 1 : 0);
+        List<Object[]> mine = new ArrayList<Object[]>(); // { tag, type, count, valueBytes }
+        mine.add(new Object[] { TAG_LENS_MODEL, TYPE_ASCII, ascii(l.model) });
+        if (l.make.length() > 0) mine.add(new Object[] { TAG_LENS_MAKE, TYPE_ASCII, ascii(l.make) });
+        if (l.focalMm > 0) mine.add(new Object[] { TAG_FOCAL_LENGTH, TYPE_RATIONAL, rational(le, l.focalMm, 1) });
+        if (l.fNumber > 0) {
+            int f100 = (int) Math.round(l.fNumber * 100);
+            mine.add(new Object[] { TAG_FNUMBER, TYPE_RATIONAL, rational(le, f100, 100) });
+            // APEX: Av = 2 log2(N)
+            int av100 = (int) Math.round(2 * Math.log(l.fNumber) / Math.log(2) * 100);
+            mine.add(new Object[] { TAG_MAX_APERTURE, TYPE_RATIONAL, rational(le, av100, 100) });
+        }
+        if (l.focalMin > 0 && l.focalMax > 0) {
+            int f100 = l.fNumber > 0 ? (int) Math.round(l.fNumber * 100) : 0, d = l.fNumber > 0 ? 100 : 0;
+            mine.add(new Object[] { TAG_LENS_SPEC, TYPE_RATIONAL,
+                rational(le, l.focalMin, 1, l.focalMax, 1, f100, d, f100, d) });
+        }
+        int count = all.size() + mine.size();
         int dp = at + 2 + count * 12 + 4;
         ByteArrayOutputStream data = new ByteArrayOutputStream();
-        if (lensBytes.length <= 4) {
-            byte[] inline = new byte[4];
-            System.arraycopy(lensBytes, 0, inline, 0, lensBytes.length);
-            all.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, inline, le));
-        } else {
-            all.add(entry(TAG_LENS_MODEL, TYPE_ASCII, lensBytes.length, u32bytes(dp + data.size(), le), le));
-            data.write(lensBytes, 0, lensBytes.length);
-            if (data.size() % 2 != 0) data.write(0);
-        }
-        if (writeFocal) {
-            all.add(entry(TAG_FOCAL_LENGTH, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
-            write32(data, focalMm, le); write32(data, 1, le);
-        }
-        if (writeF) {
-            all.add(entry(TAG_FNUMBER, TYPE_RATIONAL, 1, u32bytes(dp + data.size(), le), le));
-            write32(data, (int) Math.round(fNumber * 100), le); write32(data, 100, le);
+        for (Object[] m : mine) {
+            int tag = (Integer) m[0], type = (Integer) m[1];
+            byte[] v = (byte[]) m[2];
+            int n = type == TYPE_RATIONAL ? v.length / 8 : v.length;
+            if (v.length <= 4) {
+                byte[] inline = new byte[4];
+                System.arraycopy(v, 0, inline, 0, v.length);
+                all.add(entry(tag, type, n, inline, le));
+            } else {
+                all.add(entry(tag, type, n, u32bytes(dp + data.size(), le), le));
+                data.write(v, 0, v.length);
+                if (data.size() % 2 != 0) data.write(0);
+            }
         }
         sortByTag(all, le);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -253,7 +362,22 @@ final class ExifWriter {
         return out.toByteArray();
     }
 
+    private static byte[] ascii(String s) throws Exception {
+        return (s + "\0").getBytes("UTF-8");
+    }
+
+    /** RATIONALs, numerator/denominator pairs. */
+    private static byte[] rational(boolean le, int... nd) {
+        ByteArrayOutputStream o = new ByteArrayOutputStream(nd.length * 4);
+        for (int v : nd) write32(o, v, le);
+        return o.toByteArray();
+    }
+
     // ---- raw files ----
+
+    static String writeLensExifRaw(String path, String lensModel, int focalMm, double fNumber) {
+        return writeLensExifRaw(path, new Lens(lensModel, focalMm, fNumber));
+    }
 
     /**
      * The lens tags into a TIFF-based raw file (Sony's ARW) in place. Nothing
@@ -265,7 +389,7 @@ final class ExifWriter {
      * file is still the camera's: the pointer is changed last. The file keeps
      * its time. Null = ok.
      */
-    static String writeLensExifRaw(String path, String lensModel, int focalMm, double fNumber) {
+    static String writeLensExifRaw(String path, Lens lens) {
         RandomAccessFile f = null;
         try {
             File file = new File(path);
@@ -295,11 +419,11 @@ final class ExifWriter {
             byte[] ex = read(f, len, exifIfd + 2, n * 12);
             List<byte[]> entries = new ArrayList<byte[]>();
             for (int i = 0; i < n; i++) {
-                if (replaced(u16(ex, i * 12, le), focalMm, fNumber)) continue;
+                if (replaced(u16(ex, i * 12, le), lens)) continue;
                 entries.add(subarray(ex, i * 12, 12));
             }
             long at = len + (len % 2);
-            byte[] ifd = exifIfd(entries, (int) at, lensModel, focalMm, fNumber, le);
+            byte[] ifd = exifIfd(entries, (int) at, lens, le);
             f.seek(len);
             if (at > len) f.write(0);
             f.write(ifd);
@@ -391,21 +515,5 @@ final class ExifWriter {
         byte[] r = new byte[n];
         System.arraycopy(b, off, r, 0, n);
         return r;
-    }
-
-    private static byte[] readAll(String path) {
-        try {
-            File f = new File(path);
-            long len = f.length();
-            if (len <= 0 || len > 64 * 1024 * 1024) return null;
-            byte[] buf = new byte[(int) len];
-            FileInputStream in = new FileInputStream(f);
-            int n = 0, r;
-            while (n < buf.length && (r = in.read(buf, n, buf.length - n)) > 0) n += r;
-            in.close();
-            return n == buf.length ? buf : null;
-        } catch (Throwable t) {
-            return null;
-        }
     }
 }

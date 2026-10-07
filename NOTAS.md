@@ -361,3 +361,44 @@ sobreviviera al salir de la app: volcar, cambiar en el menú Ajuste SteadyShot
 dice el slot; entonces LensCatalog lo escribiría como aintfilm escribe los
 suyos. La app deja de ser "Java puro": `build.sh` compila la librería si hay
 NDK (sin NDK, construye sin ella).
+
+## v0.3.3 — segundo registro de la cámara (2026-10-08): JPG, nombre del objetivo, reloj
+
+Con la 0.3.2 en la A7 II (AINTFILM.LOG de Berto): el SteadyShot ya entra
+(`SteadyShot: asked manual 60 mm (lens 58 mm); camera holds info=manual
+focal=60 mode=onetime`), `setExifInfo ok`, las fotos ya casan con la sesión
+por numeración (`tagger: session Helios 44M-4 58mm 1:2`), el ARW se
+etiqueta… y el JPG falla:
+`FAIL DSC02073.JPG: FileNotFoundException: …/DSC02073.JPG.exiftmp: open
+failed: ENOENT`. La tarjeta de la cámara solo admite nombres 8.3 (regla de
+aintfilm-sony, confirmada): el temporal del JPG no podía crearse.
+
+- **JPG**: el temporal es ahora `DSC02073.TMP` (`ExifWriter.tempFor`, 8.3
+  mayúsculas) y la reescritura es en *streaming* (solo las cabeceras en
+  memoria, copia por búfer de 64 KB): antes se cargaba el JPG entero (10-15
+  MB) más una copia, en un heap pequeño. Si falla a medias, el `.TMP` se
+  borra y el original queda intacto.
+- **Fabricante y modelo**: Berto ve el ARW etiquetado pero "sin fabricante ni
+  modelo". Se escribía solo `LensModel` (0xA434). Ahora también `LensMake`
+  (0xA433, la marca del catálogo; vacío en datos manuales),
+  `LensSpecification` (0xA432: rango focal + f) y `MaxApertureValue` (0x9205,
+  APEX) — lo que leen Windows ("Fabricante/Modelo del objetivo"), Lightroom
+  ("Lens") y exiftool. El XMP lleva `exifEX:LensMake` y `aux:LensInfo`. Las
+  sesiones (`LensLog`) guardan marca y rango (columnas 10-12; los ficheros
+  antiguos siguen cargando). Qué programa usa Berto y qué campo lee
+  (MakerNote de Sony vs EXIF) sigue pendiente: ver la investigación en el PR.
+- **Reloj**: la fecha de la cámara es correcta (las fotos la llevan), pero el
+  Android de dentro arranca en 1970. El registro se marcaba con ese reloj.
+  `com.sony.scalar.sysutil.TimeUtil.getCurrentCalendar()` (stubs de
+  OpenMemories: `PlainCalendar` con year/month/day/hour/minute/second) da la
+  hora real de la cámara: `AppLog` la usa por reflexión
+  (`Sony.cameraLocalMillis`, mes tomado como 1-12; si saliera un mes de menos,
+  es 0-11), y sin ella marca `boot+HH:MM:SS` (tiempo desde el encendido) en
+  vez de una fecha falsa. Diagnóstico muestra "Reloj de la cámara".
+- **Catálogo propio**: `/DCIM/LENSES/lenses.json` nunca pudo verse en la
+  cámara (no es 8.3): se acepta `LENSES.JSN`, y la forma en que la tarjeta
+  muestra un `lenses.json` copiado desde el PC (`LENSES~1.JSO`).
+- El `msdos` de Linux no sirve para simular la tarjeta (trunca los nombres
+  largos en vez de rechazarlos, y los devuelve en minúsculas); el tour audita
+  al final que todo lo que la app dejó en la tarjeta es 8.3, y el test de host
+  cubre el nombre temporal.

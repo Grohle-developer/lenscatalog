@@ -46,9 +46,16 @@ def image_data(p):
     return hashlib.sha1(b[i:]).hexdigest()
 
 
-def write(p, lens, focal, f):
-    r = subprocess.run(["java", "-cp", CP, "com.lenscatalog.ExifCli", p, lens, str(focal), str(f)],
-                       capture_output=True, text=True)
+def write(p, lens, focal, f, make="", fmin=None, fmax=None):
+    args = ["java", "-cp", CP, "com.lenscatalog.ExifCli", p, lens, str(focal), str(f), make]
+    if fmin is not None:
+        args += [str(fmin), str(fmax)]
+    r = subprocess.run(args, capture_output=True, text=True)
+    return r.stdout.strip()
+
+
+def tempname(p):
+    r = subprocess.run(["java", "-cp", CP, "com.lenscatalog.ExifCli", "--tempname", p], capture_output=True, text=True)
     return r.stdout.strip()
 
 
@@ -59,20 +66,21 @@ def check(cond, msg):
         fails += 1
 
 
+# (fixture, writes): a write is (model, focal, f) or (model, focal, f, make, focalMin, focalMax)
 CASES = [
-    ("sony.jpg", [("Helios 44-2 58mm f/2", 58, 2.0)]),
-    ("sony.jpg", [("Canon EF 100-200mm f/4.5A", 0, 4.5)]),            # a zoom: FocalLength left alone
+    ("sony.jpg", [("Helios 44-2 58mm f/2", 58, 2.0, "Helios", 58, 58)]),
+    ("sony.jpg", [("Canon EF 100-200mm f/4.5A", 0, 4.5, "Canon", 100, 200)]),  # a zoom: FocalLength left alone
     ("sony.jpg", [("Mir-1 37mm f/2.8", 37, 2.8), ("Mir-1B 37mm f/2.8", 37, 2.8)]),  # tagged twice
-    ("sony.jpg", [("Voigtländer Color-Ultron 50mm f/1.8", 50, 1.8)]),  # UTF-8 name
-    ("bigendian.jpg", [("Jupiter-9 85mm f/2", 85, 2.0)]),
+    ("sony.jpg", [("Voigtländer Color-Ultron 50mm f/1.8", 50, 1.8, "Voigtländer", 50, 50)]),  # UTF-8 name
+    ("bigendian.jpg", [("Jupiter-9 85mm f/2", 85, 2.0, "Jupiter", 85, 85)]),
     ("noexifptr.jpg", [("Industar-61 L/Z 50mm f/2.8", 50, 2.8)]),
-    ("noexif.jpg", [("Manual 50mm f/1.8", 50, 1.8)]),
-    ("sony.arw", [("Helios 44-2 58mm f/2", 58, 2.0)]),
-    ("sony.arw", [("Canon FD 35-70mm f/4", 0, 4.0), ("Canon FD 35-70mm f/4 (2)", 0, 4.0)]),  # zoom, twice
+    ("noexif.jpg", [("Manual 50mm f/1.8", 50, 1.8)]),                 # a lens entered by hand: no maker
+    ("sony.arw", [("Helios 44-2 58mm f/2", 58, 2.0, "Helios", 58, 58)]),
+    ("sony.arw", [("Canon FD 35-70mm f/4", 0, 4.0, "Canon", 35, 70), ("Canon FD 35-70mm f/4 (2)", 0, 4.0, "Canon", 35, 70)]),  # zoom, twice
 ]
 if os.environ.get("ARW_SAMPLE"):
     shutil.copy(os.environ["ARW_SAMPLE"], os.path.join(FX, "sample.arw"))
-    CASES.append(("sample.arw", [("Helios 44-2 58mm f/2", 58, 2.0)]))
+    CASES.append(("sample.arw", [("Helios 44-2 58mm f/2", 58, 2.0, "Helios", 58, 58)]))
 
 work = os.path.join(FX, "work")
 os.makedirs(work, exist_ok=True)
@@ -84,8 +92,11 @@ for n, (name, writes) in enumerate(CASES):
     orig = open(p, "rb").read()
     before, warn0 = tags(p), warnings(p)
     data0 = None if raw else image_data(p)
-    for lens, focal, f in writes:
-        out = write(p, lens, focal, f)
+    for w in writes:
+        lens, focal, f = w[0], w[1], w[2]
+        make = w[3] if len(w) > 3 else ""
+        fmin, fmax = (w[4], w[5]) if len(w) > 5 else (None, None)
+        out = write(p, lens, focal, f, make, fmin, fmax)
     print("%s <- %r: %s" % (os.path.basename(p), lens, out))
     after = tags(p)
     check(out == "OK", "writer returned OK")
@@ -98,7 +109,20 @@ for n, (name, writes) in enumerate(CASES):
         check(after.get("ExifIFD:FocalLength") == before.get("ExifIFD:FocalLength"),
               "zoom: the camera's FocalLength kept (%s)" % before.get("ExifIFD:FocalLength"))
     check(abs(after.get("ExifIFD:FNumber", 0) - f) < 1e-6, "ExifIFD:FNumber = %s" % f)
-    mine = ("ExifIFD:LensModel", "ExifIFD:FocalLength", "ExifIFD:FNumber")
+    if make:
+        check(after.get("ExifIFD:LensMake") == make, "ExifIFD:LensMake = %r" % make)
+        lo, hi = (fmin, fmax) if fmin is not None else (focal, focal)
+        info = after.get("ExifIFD:LensInfo")
+        check(info == "%d %d %s %s" % (lo, hi, ("%g" % f), ("%g" % f)) or info == "%d %d %g %g" % (lo, hi, f, f),
+              "ExifIFD:LensInfo = %r (range %d-%d, f/%g)" % (info, lo, hi, f))
+    else:
+        check("ExifIFD:LensMake" not in after or after.get("ExifIFD:LensMake") == before.get("ExifIFD:LensMake"),
+              "no LensMake written for a lens without a maker")
+    # (exiftool converts the APEX value back to an f-number, even with -n; the APEX is kept to 1/100)
+    check(abs(after.get("ExifIFD:MaxApertureValue", 0) - f) < 0.02,
+          "ExifIFD:MaxApertureValue = f/%g (got f/%s)" % (f, after.get("ExifIFD:MaxApertureValue")))
+    mine = ("ExifIFD:LensModel", "ExifIFD:LensMake", "ExifIFD:LensInfo", "ExifIFD:FocalLength", "ExifIFD:FNumber",
+            "ExifIFD:MaxApertureValue")
     lost = [k for k, v in before.items() if k.split(":")[0] in ("IFD0", "ExifIFD", "IFD1")
             and k not in mine and not k.endswith("ThumbnailOffset") and after.get(k) != v]
     check(not lost, "the camera's EXIF kept (%d tags)%s" % (
@@ -128,9 +152,17 @@ for n, (name, writes) in enumerate(CASES):
             pass
     else:
         check(image_data(p) == data0, "image data byte-identical")
+        left = [n for n in os.listdir(os.path.dirname(p)) if n.upper().endswith(".TMP")]
+        check(not left, "no temporary file left next to the photo %s" % left)
     check(int(os.path.getmtime(p)) == 1759831200, "file time kept")
     new = warnings(p) - warn0
     check(not new, "exiftool -validate: nothing new %s" % sorted(new))
+# the temporary file a JPEG goes through has an 8.3 name, upper case: what the camera's card takes
+for name, want in (("DSC02073.JPG", "DSC02073.TMP"), ("/x/100MSDCF/dsc02073.jpeg", "DSC02073.TMP"),
+                   ("a.very.long.name.jpg", "AVERYLON.TMP")):
+    got = tempname(name)
+    check(got == want, "temp name for %s is %s (got %s)" % (name, want, got))
+
 # a sidecar someone else wrote (edits from a computer) is left alone
 p = os.path.join(work, "foreign.arw")
 shutil.copy(os.path.join(FX, "sony.arw"), p)

@@ -7,10 +7,12 @@ import java.io.FileOutputStream;
 /**
  * An XMP sidecar next to a raw file: DSC01837.ARW -> DSC01837.XMP, the name
  * Lightroom, Bridge and Capture One look for on import (an 8.3 name, upper
- * case, as the camera's card wants). It says the lens (exifEX:LensModel and
- * aux:Lens), the focal length when there is one (primes) and the f-number,
- * so a raw converter has them even if it reads the lens from Sony's MakerNote
- * rather than from the EXIF. The raw file itself is not touched here.
+ * case, as the camera's card wants). It says the lens (exifEX:LensModel,
+ * exifEX:LensMake and aux:Lens), its range (aux:LensInfo, the four numbers of
+ * EXIF's LensSpecification), the focal length when there is one (primes) and
+ * the f-number, so a raw converter has them even if it reads the lens from
+ * Sony's MakerNote rather than from the EXIF. The raw file itself is not
+ * touched here.
  *
  * A sidecar that LensCatalog did not write (one a computer left on the card,
  * with someone's edits in it) is never overwritten. No android.* import:
@@ -30,10 +32,14 @@ final class XmpSidecar {
     }
 
     static String write(File photo, String lensModel, int focalMm, double fNumber) {
+        return write(photo, new ExifWriter.Lens(lensModel, focalMm, fNumber));
+    }
+
+    static String write(File photo, ExifWriter.Lens l) {
         try {
             File x = fileFor(photo);
             if (x.exists() && !ours(x)) return "kept " + x.getName() + " (not written by " + TOOLKIT + ")";
-            String lens = escape(lensModel);
+            String model = escape(l.model);
             StringBuilder s = new StringBuilder();
             s.append("<?xpacket begin=\"﻿\" id=\"W5M0MpCehiHzreSzNTczkc9d\"?>\n");
             s.append("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\" x:xmptk=\"").append(TOOLKIT).append("\">\n");
@@ -42,10 +48,16 @@ final class XmpSidecar {
             s.append("    xmlns:exif=\"http://ns.adobe.com/exif/1.0/\"\n");
             s.append("    xmlns:exifEX=\"http://cipa.jp/exif/1.0/\"\n");
             s.append("    xmlns:aux=\"http://ns.adobe.com/exif/1.0/aux/\"\n");
-            s.append("   exifEX:LensModel=\"").append(lens).append("\"\n");
-            s.append("   aux:Lens=\"").append(lens).append("\"");
-            if (focalMm > 0) s.append("\n   exif:FocalLength=\"").append(focalMm).append("/1\"");
-            if (fNumber > 0) s.append("\n   exif:FNumber=\"").append(Math.round(fNumber * 100)).append("/100\"");
+            s.append("   exifEX:LensModel=\"").append(model).append("\"\n");
+            if (l.make.length() > 0) s.append("   exifEX:LensMake=\"").append(escape(l.make)).append("\"\n");
+            s.append("   aux:Lens=\"").append(model).append("\"");
+            if (l.focalMin > 0 && l.focalMax > 0) {
+                String f = l.fNumber > 0 ? Math.round(l.fNumber * 100) + "/100" : "0/0";
+                s.append("\n   aux:LensInfo=\"").append(l.focalMin).append("/1 ").append(l.focalMax).append("/1 ")
+                        .append(f).append(' ').append(f).append('"');
+            }
+            if (l.focalMm > 0) s.append("\n   exif:FocalLength=\"").append(l.focalMm).append("/1\"");
+            if (l.fNumber > 0) s.append("\n   exif:FNumber=\"").append(Math.round(l.fNumber * 100)).append("/100\"");
             s.append("/>\n </rdf:RDF>\n</x:xmpmeta>\n<?xpacket end=\"w\"?>\n");
             FileOutputStream out = new FileOutputStream(x);
             try {
