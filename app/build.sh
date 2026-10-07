@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
-# Builds out/lenscatalog.apk: pure Java, no JNI (the whole app is Sony
-# framework calls by reflection + JSON + UI). javac, then d8 for API 10,
-# signed v1 only — the camera's Android 2.3.7 knows no other scheme.
+# Builds out/lenscatalog.apk: Java (Sony framework calls by reflection + JSON +
+# UI), javac then d8 for API 10, plus one small native library, liblcstore.so
+# (jni/: the camera's settings store, armeabi, NDK r16b), signed v1 only — the
+# camera's Android 2.3.7 knows no other scheme. Without the NDK the APK is built
+# without the library (the app then says the store is not available).
 #
 #   ./build.sh   -> out/lenscatalog.apk
 #
 # Toolchain (override via environment):
-#   JAVA_HOME  ANDROID_SDK  BUILD_TOOLS  PLATFORM_JAR
+#   JAVA_HOME  ANDROID_SDK  ANDROID_NDK  BUILD_TOOLS  PLATFORM_JAR
 # Signing: ANDROID_KEYSTORE_B64 + ANDROID_KEYSTORE_PASSWORD + ANDROID_KEY_ALIAS +
 # ANDROID_KEY_PASSWORD sign with the real key; otherwise a throwaway key is made
 # in debug.keystore (the camera installs any self-signed v1 APK, but not over an
@@ -19,6 +21,7 @@ ROOT="$PWD"
 : "${ANDROID_SDK:=${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Android/Sdk}}}"
 : "${JAVA_HOME:=$HOME/workspace/a7ii-fw/hidden_files/ghidra/jdk-21.0.12.1+1}"
 : "${BUILD_TOOLS:=30.0.3}"
+: "${ANDROID_NDK:=${ANDROID_NDK_HOME:-$HOME/Android/android-ndk-r16b}}"
 : "${PLATFORM_JAR:=$ANDROID_SDK/platforms/android-28/android.jar}"
 BT="$ANDROID_SDK/build-tools/$BUILD_TOOLS"
 API_VERSIONS="$(dirname "$PLATFORM_JAR")/data/api-versions.xml"
@@ -35,8 +38,19 @@ VERSION_NAME="$(sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' AndroidManif
 VERSION_CODE="$(sed -n 's/.*android:versionCode="\([^"]*\)".*/\1/p' AndroidManifest.xml)"
 echo "building LensCatalog $VERSION_NAME (versionCode $VERSION_CODE)"
 
-rm -rf out/gen out/classes out/dex out/*.apk
+rm -rf out/gen out/classes out/dex out/*.apk out/libs out/obj out/apklib
 mkdir -p out/gen out/classes out/dex
+
+if [ -x "$ANDROID_NDK/ndk-build" ]; then
+  echo "[0/7] ndk-build liblcstore.so (armeabi, android-14 headers; runs on the camera's 2.3.7)"
+  "$ANDROID_NDK/ndk-build" -s NDK_PROJECT_PATH="$ROOT" APP_BUILD_SCRIPT="$ROOT/jni/Android.mk" \
+    NDK_APPLICATION_MK="$ROOT/jni/Application.mk" NDK_LIBS_OUT="$ROOT/out/libs" NDK_OUT="$ROOT/out/obj"
+  mkdir -p out/apklib/lib/armeabi
+  # the store library only, never the libosal_uipc.so stub it links against (the camera has the real one)
+  cp -f out/libs/armeabi/liblcstore.so out/apklib/lib/armeabi/
+else
+  echo "[0/7] no NDK at $ANDROID_NDK: building without liblcstore.so (no settings store)"
+fi
 
 echo "[1/7] aapt R.java"
 "$BT/aapt" package -f -m -J out/gen -M AndroidManifest.xml -S res -A assets -I "$AJ"
@@ -53,6 +67,7 @@ python3 tools/api-check.py "$BT/dexdump" "$API_VERSIONS" out/dex/classes.dex 10
 echo "[5/7] aapt package + dex"
 "$BT/aapt" package -f -M AndroidManifest.xml -S res -A assets -I "$AJ" -F out/unaligned.apk
 ( cd out/dex && "$BT/aapt" add ../unaligned.apk classes.dex )
+[ ! -d out/apklib/lib ] || ( cd out/apklib && for f in lib/*/*.so; do "$BT/aapt" add ../unaligned.apk "$f"; done )
 echo "[6/7] zipalign"
 "$BT/zipalign" -f 4 out/unaligned.apk out/aligned.apk
 

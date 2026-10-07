@@ -314,3 +314,50 @@ Pendiente en cámara: `exiftool` deja `Composite:LensID` en 65535 porque lo
 saca del `LensType` del MakerNote de Sony, que no se toca a propósito (es un
 bloque binario cifrado en parte); qué muestra Lightroom sin el sidecar
 depende de si prefiere el MakerNote o el EXIF — con el sidecar, el XMP manda.
+
+## v0.3.2 — lo que dijo la cámara (AINTFILM.LOG de Berto, 2026-10-08)
+
+Berto, en la A7 II: el etiquetado da 0/0/0 (ni JPG ni ARW) y la focal del
+SteadyShot no se aplica nunca, ni con la app abierta.
+
+### Etiquetado: el reloj de Android está en 1970
+El registro de la cámara lo deja claro: todas las líneas de LensCatalog llevan
+`1970-01-01 00:0x` (el Android de la cámara cuenta desde el encendido, no
+tiene la hora), mientras que las fotos llevan la fecha real
+(`DSC02070.JPG mtime=1791485510000` = 8-oct-2026). Las sesiones se marcaban
+con `System.currentTimeMillis()` → ninguna foto caía en ninguna sesión → las
+46 candidatas acababan en `no session for …`, que no se contaba en pantalla.
+
+Arreglo (`CardSeq`): las sesiones se delimitan por la **numeración de la
+cámara**, no por el tiempo. Clave de una foto = carpeta·100000 + número
+(`100MSDCF/DSC02070` → 10002070). Al aplicar un objetivo (y al detectar uno
+electrónico, y en el corte del etiquetador) se anota `CardSeq.next()` = la
+siguiente foto que hará la cámara; una sesión cubre `[startKey, endKey)`. Un
+RAW+JPEG comparten número. Las sesiones de antes (sin claves) siguen casando
+por tiempo. El resultado muestra ahora "Sin objetivo: N" (fotos hechas antes de
+aplicar ninguno). El tour reproduce la cámara: pone el reloj del sim en 1970 y
+dispara con `adb push` (que conserva la fecha real del fichero).
+
+### SteadyShot: nunca se pasaba a manual
+Los stubs de OpenMemories (`CameraEx$ParametersModifier`) tienen
+`setAntiHandBlurInfo("manual" | "from-lens")` (= menú Ajuste SteadyShot:
+Manual/Auto) además de la focal; la app solo ponía la focal, que con
+"from-lens" y un objetivo sin contactos se ignora. Ahora: info=manual + focal
+redondeada a la lista del menú de la A7 II (8…1000 mm; empate → la más
+corta), confirmado con su propio `setParameters` (antes iba dentro del bloque
+de corrección de lente: si este fallaba, no se confirmaba nada) y **leído de
+vuelta**: el registro dice lo que la cámara tiene
+(`SteadyShot: asked manual 60 mm (lens 58 mm); camera holds info=… focal=… mode=…`)
+y el resultado avisa si no cuadra o si el SteadyShot está apagado. Diagnóstico
+muestra info/modo/focal y los valores admitidos. Los mensajes de `Sony` van
+ahora también al registro de la tarjeta (antes solo a logcat).
+
+### Almacén de ajustes (librería nativa)
+`liblcstore.so` (jni/, el driver de aintfilm-sony/OpenMemories, MIT; NDK
+r16b, armeabi): Diagnóstico → "Volcar ajustes de la cámara" escribe el
+almacén en `/AINTFILM/STORE001.TXT` (solo lectura). Si la focal no
+sobreviviera al salir de la app: volcar, cambiar en el menú Ajuste SteadyShot
+→ focal (p. ej. 50 → 85), volcar otra vez, y `app/tools/store-diff.py`
+dice el slot; entonces LensCatalog lo escribiría como aintfilm escribe los
+suyos. La app deja de ser "Java puro": `build.sh` compila la librería si hay
+NDK (sin NDK, construye sin ella).

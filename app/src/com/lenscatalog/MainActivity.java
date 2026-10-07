@@ -59,7 +59,8 @@ public class MainActivity extends Activity implements MenuView.Listener {
                 if (lens != null && lens.length() > 0) {
                     LensLog.Session cur = lensLog.current();
                     if (cur == null || !cur.electronic || !lens.equals(cur.displayName)) {
-                        lensLog.startSession("electronic", lens, 0, 0, true);
+                        lensLog.startSession("electronic", lens, 0, 0, true, CardSeq.next(
+                                android.os.Environment.getExternalStorageDirectory().getAbsolutePath()));
                     }
                 }
                 view.showStart(lens);

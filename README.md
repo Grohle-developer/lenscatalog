@@ -3,7 +3,8 @@
 A PlayMemories Camera App (PMCA) for the **Sony A7 II** (Android 2.3.7, API 10):
 a catalog of manual and adapted lenses that injects EXIF data **before capture**
 and sets the IBIS focal length — so vintage glass gets proper stabilization and
-correct metadata. Pure Java, no JNI. ~120 KB APK, v1-signed.
+correct metadata. Java plus one small native library for the camera's settings
+store. ~130 KB APK, v1-signed.
 
 ![home](shots/01-inicio.png) ![lens page](shots/10-ficha-zoom.png)
 
@@ -63,10 +64,11 @@ cd app
 ./build.sh   # -> out/lenscatalog.apk
 ```
 
-Toolchain: JDK (`javac --release 8`), Android SDK **build-tools 30.0.3**
+Toolchain: JDK (`javac --release 8`), Android NDK **r16b** for `liblcstore.so`
+(optional: without it the APK is built without the settings store), Android SDK **build-tools 30.0.3**
 (`aapt`, `d8 --min-api 10`, `zipalign`, `apksigner`), platform `android-28`.
 The APK is signed v1-only — the camera's Android 2.3.7 knows no other scheme.
-Override via `JAVA_HOME`, `ANDROID_SDK`, `BUILD_TOOLS`, `PLATFORM_JAR`.
+Override via `JAVA_HOME`, `ANDROID_SDK`, `ANDROID_NDK`, `BUILD_TOOLS`, `PLATFORM_JAR`.
 Set `ANDROID_KEYSTORE_B64` (+ password/alias vars) to sign with a real key;
 otherwise a throwaway debug key is generated.
 

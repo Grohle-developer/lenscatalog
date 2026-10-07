@@ -1,7 +1,6 @@
 package com.lenscatalog;
 
 import android.hardware.Camera;
-import android.util.Log;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -14,7 +13,6 @@ import java.util.List;
  * calls degrade to logged "would call" lines and the UI keeps working.
  */
 final class Sony {
-    private static final String TAG = "LensCatalog";
 
     private Object cameraEx;
     private Camera camera;
@@ -36,6 +34,26 @@ final class Sony {
     /** Simulator fallback range; on the camera the real min/max is queried
      * per key via getMin/MaxLensCorrectionLevel. */
     private static final int LC_SIM_MIN = -20, LC_SIM_MAX = 20;
+
+    // -------------------------------------------- SteadyShot (IBIS)
+    // CameraEx$ParametersModifier (OpenMemories stubs): the focal length only
+    // counts when SteadyShot takes it from the user, AntiHandBlurInfo
+    // "manual" (the menu's SteadyShot Adjust: Manual); with "from-lens" the
+    // body asks the lens, which an adapted manual lens cannot answer. 0.2-0.3
+    // never set it, so the focal was ignored.
+    static final String IBIS_MANUAL = "manual";
+    /** The focal lengths the A7 II's SteadyShot Adjust: Manual offers. */
+    static final int[] IBIS_FOCALS = { 8, 10, 12, 16, 18, 20, 24, 28, 30, 35, 40, 50, 60, 70, 85, 100,
+        120, 135, 150, 180, 200, 250, 300, 350, 400, 450, 500, 600, 700, 800, 1000 };
+
+    /** The SteadyShot focal nearest a lens's; on a tie the shorter one (it under-corrects, the safe side). */
+    static int ibisFocal(int focal) {
+        int best = IBIS_FOCALS[0];
+        for (int f : IBIS_FOCALS) {
+            if (Math.abs(f - focal) < Math.abs(best - focal)) best = f;
+        }
+        return best;
+    }
 
     /** Open the camera's framework. Returns false in the simulator. */
     boolean open() {
@@ -152,7 +170,7 @@ final class Sony {
     String apply(String lensDisplayName, int focal, double maxAperture, boolean numericExifFocal,
             boolean lcEnabled, int[] lcLevels) {
         if (!isCamera()) {
-            i("SIM setAntiHandBlurFocalLength(" + focal + ")");
+            i("SIM setAntiHandBlurInfo(manual) setAntiHandBlurFocalLength(" + ibisFocal(focal) + ") // lens " + focal + " mm");
             i("SIM setExifInfo(lensName=\"" + lensDisplayName + "\", focal="
                     + (numericExifFocal ? focal + "/1" : "SKIPPED (zoom range)") + ", writeMode=true"
                     + (maxAperture > 0 ? ", fNumber~" + maxAperture : "") + ")");
@@ -168,19 +186,40 @@ final class Sony {
             return "SIM";
         }
         StringBuilder done = new StringBuilder();
+        // SteadyShot first, committed on its own: whatever the EXIF or the
+        // lens correction does after, the focal length is in.
+        int ibis = ibisFocal(focal);
+        try {
+            Camera.Parameters p0 = camera.getParameters();
+            Object m0 = createModifier(p0);
+            try {
+                m0.getClass().getMethod("setAntiHandBlurInfo", String.class).invoke(m0, IBIS_MANUAL);
+            } catch (Throwable t) {
+                e("setAntiHandBlurInfo(manual)", t);
+            }
+            m0.getClass().getMethod("setAntiHandBlurFocalLength", int.class).invoke(m0, ibis);
+            camera.setParameters(p0);
+            // what the camera holds now
+            Object mr = createModifier(camera.getParameters());
+            String info = String.valueOf(call(mr, "getAntiHandBlurInfo"));
+            String mode = String.valueOf(call(mr, "getAntiHandBlurMode"));
+            Object got = call(mr, "getAntiHandBlurFocalLength");
+            i("SteadyShot: asked manual " + ibis + " mm (lens " + focal + " mm); camera holds info=" + info
+                    + " focal=" + got + " mode=" + mode);
+            if (IBIS_MANUAL.equals(info) && got != null && ((Integer) got).intValue() == ibis) {
+                done.append("IBIS=").append(ibis).append("mm ");
+            } else {
+                done.append("IBISNO=").append(info).append('/').append(got).append(' ');
+            }
+            if ("off".equals(mode)) done.append("IBISOFF ");
+        } catch (Throwable t) {
+            e("SteadyShot", t);
+        }
         try {
             Camera.Parameters p = camera.getParameters();
             Object mod = cameraEx.getClass()
                     .getMethod("createParametersModifier", Camera.Parameters.class)
                     .invoke(cameraEx, p);
-            // IBIS focal length
-            try {
-                mod.getClass().getMethod("setAntiHandBlurFocalLength", int.class).invoke(mod, focal);
-                done.append("IBIS=").append(focal).append("mm ");
-                i("setAntiHandBlurFocalLength(" + focal + ")");
-            } catch (Throwable t) {
-                e("setAntiHandBlurFocalLength", t);
-            }
             // EXIF, guarded
             boolean supported = false;
             try {
@@ -240,6 +279,16 @@ final class Sony {
                 .invoke(cameraEx, p);
     }
 
+    /** A getter by name, or null when the camera has not got it. */
+    private Object call(Object o, String name) {
+        try {
+            return o.getClass().getMethod(name).invoke(o);
+        } catch (Throwable t) {
+            e(name, t);
+            return null;
+        }
+    }
+
     private static void setLensCorrection(Object mod, boolean on) throws Exception {
         mod.getClass().getMethod("setLensCorrection", boolean.class).invoke(mod, on);
     }
@@ -250,6 +299,18 @@ final class Sony {
                 .invoke(mod, key, level);
     }
 
+    /** SteadyShot as the camera holds it now, one line (for the store dumps); "" off the camera. */
+    String steadyShot() {
+        if (!isCamera()) return "";
+        try {
+            Object m = createModifier(camera.getParameters());
+            return "SteadyShot info=" + call(m, "getAntiHandBlurInfo") + " focal=" + call(m, "getAntiHandBlurFocalLength")
+                    + " mode=" + call(m, "getAntiHandBlurMode");
+        } catch (Throwable t) {
+            return "SteadyShot: " + t;
+        }
+    }
+
     /** Diagnostic lines: which Sony EXIF/correction APIs exist on this body. */
     List<String> diagnose() {
         List<String> out = new ArrayList<String>();
@@ -258,6 +319,7 @@ final class Sony {
             out.add("SIM: no Sony framework");
             out.add("setExifInfo: SKIPPED");
             out.add("isSupportedExifInfo: SKIPPED");
+            out.add("SteadyShot: SKIPPED");
             return out;
         }
         try {
@@ -275,6 +337,11 @@ final class Sony {
             out.add("setAntiHandBlurFocalLength: "
                     + (findMethod(mod.getClass(), "setAntiHandBlurFocalLength", 1) != null
                             ? "EXISTS" : "MISSING"));
+            out.add("SteadyShot info: " + call(mod, "getAntiHandBlurInfo")
+                    + " of " + call(mod, "getSupportedAntiHandBlurInfos"));
+            out.add("SteadyShot mode: " + call(mod, "getAntiHandBlurMode")
+                    + " of " + call(mod, "getSupportedAntiHandBlurModes"));
+            out.add("SteadyShot focal: " + call(mod, "getAntiHandBlurFocalLength") + " mm");
             out.add("setLensCorrection: "
                     + (findMethod(mod.getClass(), "setLensCorrection", 1) != null
                             ? "EXISTS" : "MISSING"));
@@ -387,13 +454,15 @@ final class Sony {
 
     String logText() { return log.toString(); }
 
+    // Through AppLog: the card's /AINTFILM/AINTFILM.LOG (what the camera can
+    // tell us) and logcat (its sink).
     private void i(String s) {
-        Log.i(TAG, s);
+        AppLog.i(s);
         log.append("I ").append(s).append('\n');
     }
 
     private void e(String what, Throwable t) {
-        Log.e(TAG, what + ": " + t);
+        AppLog.i("ERROR " + what + ": " + t);
         log.append("E ").append(what).append(": ").append(t).append('\n');
     }
 }

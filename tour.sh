@@ -52,7 +52,16 @@ start() {
 }
 focused() { adb_ shell dumpsys window windows | tr -d '\r' | grep -E "mCurrentFocus" | grep -q "$1"; }
 # the shutter: a camera-like JPEG written now, so it carries the time it was "taken"
-shoot() { adb_ shell "cat $CARD/LCSIM/CAMERA.${1##*.} > $DCIM/$1"; say "shot $1"; }
+# The shutter, as on the A7 II: there Android's clock starts at 1970 on every
+# power-on (the camera's own log), while the photographs carry the camera's real
+# date. So the guest's clock is set to 1970 below, and a "shot" is pushed from
+# the computer with today's date (adb push keeps the file's time).
+shoot() {
+  local src="$OUT/fixtures/CAMERA.${1##*.}"
+  touch "$src"
+  adb_ push "$src" "$DCIM/$1" >/dev/null 2>&1
+  say "shot $1"
+}
 pref() { adb_ shell cat /data/data/$PKG/shared_prefs/lenscatalog.xml | tr -d '\r'; }
 has_pref() { pref | grep -qF -- "$1"; }
 wait_log() { for _ in $(seq 1 "${2:-120}"); do logged "$1" && return 0; sleep 1; done; return 1; }
@@ -66,15 +75,19 @@ if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "es" ]; then
   adb_ shell stop; sleep 2; adb_ shell start; sleep 90
 fi
 adb_ shell pm clear $PKG >/dev/null
+# The emulator puts its clock back to the computer's now and then: it is set to
+# 1970 again right before each Apply and Write EXIF, the moments that matter.
+clock1970() { adb_ shell date -s 19700101.000500 >/dev/null 2>&1; }
+clock1970
 rm -rf "$OUT/shots" "$OUT/photos" && mkdir -p "$OUT/shots" "$OUT/photos" "$OUT/fixtures"
 python3 "$ROOT/app/test/exif_fixtures.py" "$OUT/fixtures"
-adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json" >/dev/null 2>&1
+adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json; rm $CARD/AINTFILM/AINTFILM.LOG" >/dev/null 2>&1
 adb_ shell "mkdir $CARD/DCIM; mkdir $DCIM; mkdir $CARD/LCSIM; mkdir $CARD/AINTFILM; mkdir $CARD/AINTFILM/SIM" >/dev/null 2>&1
-adb_ push "$OUT/fixtures/sony.jpg" $CARD/LCSIM/CAMERA.JPG >/dev/null 2>&1
+cp "$OUT/fixtures/sony.jpg" "$OUT/fixtures/CAMERA.JPG"
 # the raw file of a RAW+JPEG shot: LC_ARW=<a real .ARW>, else the fixture's outline of one
 ARW="${LC_ARW:-$OUT/fixtures/sony.arw}"
 say "raw file for the shots: $ARW"
-adb_ push "$ARW" $CARD/LCSIM/CAMERA.ARW >/dev/null 2>&1
+cp "$ARW" "$OUT/fixtures/CAMERA.ARW"
 
 # ------------------------------------------------------------------ a prime, starred, with correction
 say "1. Home, auto-exit off (so the results stay up for their screenshots)"
@@ -96,9 +109,9 @@ key down down down enter up up enter        # star it, then correction ON (the s
 shot 06-favorito-correccion
 key down enter right right right down down down down down left left
 shot 07-editor
-key menu enter                              # back to the page (on Apply), apply
+key menu; clock1970; key enter              # back to the page (on Apply), apply
 shot 08-aplicado
-check "IBIS 58 mm" logged "SIM setAntiHandBlurFocalLength(58)"
+check "SteadyShot manual, 58 mm lens -> 60 mm (the nearest the A7 II offers)" logged "SIM setAntiHandBlurInfo(manual) setAntiHandBlurFocalLength(60) // lens 58 mm"
 check "EXIF lensName + focal 58" logged 'lensName="Helios 44 58mm 1:2", focal=58/1'
 check "correction ON with shading-w=3, chroma-r=-2" logged 'shading-w=3 shading-wm=0 shading-cr=0 shading-cb=0 shading-cm=0 chroma-r=-2'
 sleep 3; shoot DSC00001.JPG; shoot DSC00001.ARW; sleep 1; shoot DSC00002.JPG
@@ -109,9 +122,9 @@ key menu
 shot 09-inicio-ultimo
 key down down down down down enter enter
 shot 10-ficha-zoom
-key enter
+clock1970; key enter
 shot 11-aplicado-zoom
-check "zoom: IBIS at the wide end (100)" logged "SIM setAntiHandBlurFocalLength(100)"
+check "zoom: SteadyShot at the wide end (100)" logged "SIM setAntiHandBlurInfo(manual) setAntiHandBlurFocalLength(100) // lens 100 mm"
 check "zoom: no numeric EXIF focal" logged 'focal=SKIPPED (zoom range)'
 sleep 3; shoot DSC00003.JPG
 
@@ -124,18 +137,25 @@ key down right right right right right right right
 shot 13-manual-valores
 key down enter
 shot 14-ficha-manual
-key enter
+clock1970; key enter
 check "manual lens applied" logged 'lensName="Manual 35mm f/2.8", focal=35/1'
 sleep 3; shoot DSC00004.JPG
 
 # ------------------------------------------------------------------ Write EXIF
 say "5. Write EXIF to photos"
 sleep 2
-key menu enter
+key menu; clock1970; key enter
 wait_log "tagger: done" 120 || true
 sleep 1
 shot 15-etiquetado
-check "tagger: 5 tagged (4 JPEG + 1 ARW), 0 failed" logged "tagger: done tagged=5 already=0 failed=0"
+check "tagger: 5 tagged (4 JPEG + 1 ARW), 0 failed, though the app's clock says 1970" logged "tagger: done tagged=5 already=0 failed=0 skippedEl=0 noSession=0"
+card_log() { adb_ shell cat $CARD/AINTFILM/AINTFILM.LOG | tr -d '\r'; }
+# (the applies and the tagging of steps 2-5: the log up to the first "tagger: done")
+applied_in_1970() {
+  local l; l="$(card_log | awk '{print} /tagger: done/ {exit}' | grep -E 'setAntiHandBlurFocalLength|tagger: start')"
+  [ -n "$l" ] && ! echo "$l" | grep -qv '^1970-'
+}
+check "the app's clock said 1970 at every Apply and at Write EXIF (as on the camera)" applied_in_1970
 check "the ARW tagged in place and its sidecar written" logged "tagger: raw DSC00001.ARW exif=ok sidecar=DSC00001.XMP"
 for n in 1 2 3 4; do adb_ pull $DCIM/DSC0000$n.JPG "$OUT/photos/DSC0000$n.JPG" >/dev/null 2>&1; done
 adb_ pull $DCIM/DSC00001.ARW "$OUT/photos/DSC00001.ARW" >/dev/null 2>&1

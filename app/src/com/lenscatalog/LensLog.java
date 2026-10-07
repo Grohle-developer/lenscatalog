@@ -32,6 +32,10 @@ final class LensLog {
         long endTime;        // millis, 0 if this is the current session
         int photoCount;      // photos tagged during this session
         boolean electronic;  // true: native lens, EXIF already written by camera
+        // Where the session is in the camera's photo sequence (CardSeq.key):
+        // its photographs are startKey <= key < endKey. -1: not known (a
+        // session logged before 0.3.2, or still open).
+        long startKey = -1, endKey = -1;
 
         boolean isCurrent() { return endTime == 0; }
     }
@@ -47,8 +51,14 @@ final class LensLog {
     /** Start a new session, ending the current one. */
     synchronized void startSession(String id, String displayName, int focal,
                                    double aperture, boolean electronic) {
+        startSession(id, displayName, focal, aperture, electronic, -1);
+    }
+
+    /** A new session whose photographs start at `key` in the camera's sequence (CardSeq.next). */
+    synchronized void startSession(String id, String displayName, int focal,
+                                   double aperture, boolean electronic, long key) {
         long now = System.currentTimeMillis();
-        endCurrentSession(now);
+        endCurrentSession(now, key);
         Session s = new Session();
         s.id = id;
         s.displayName = displayName;
@@ -58,6 +68,7 @@ final class LensLog {
         s.endTime = 0;
         s.photoCount = 0;
         s.electronic = electronic;
+        s.startKey = key;
         sessions.add(s);
         prune();
         save();
@@ -65,8 +76,16 @@ final class LensLog {
 
     /** End the current session (if any) at the given time. */
     synchronized void endCurrentSession(long now) {
+        endCurrentSession(now, -1);
+    }
+
+    /** End the current session at `now`, its photographs ending before `key` in the camera's sequence. */
+    synchronized void endCurrentSession(long now, long key) {
         for (Session s : sessions) {
-            if (s.isCurrent()) s.endTime = now;
+            if (s.isCurrent()) {
+                s.endTime = now;
+                s.endKey = key;
+            }
         }
         save();
     }
@@ -127,6 +146,26 @@ final class LensLog {
         return null;
     }
 
+    /**
+     * The session a photograph belongs to by its place in the camera's
+     * sequence (CardSeq.key), or null: completed sessions only, the newest
+     * first, startKey <= key < endKey. Clock-free, unlike sessionAt.
+     */
+    synchronized Session sessionAtKey(long key) {
+        if (key < 0) return null;
+        for (int i = sessions.size() - 1; i >= 0; i--) {
+            Session s = sessions.get(i);
+            if (!s.isCurrent() && s.startKey >= 0 && s.endKey >= 0 && s.startKey <= key && key < s.endKey) return s;
+        }
+        return null;
+    }
+
+    /** One more photograph in a session. */
+    synchronized void countPhotoIn(Session s) {
+        s.photoCount++;
+        save();
+    }
+
     private void prune() {
         // Keep MAX finished sessions plus the current one.
         int finished = 0;
@@ -164,6 +203,10 @@ final class LensLog {
                 s.endTime = Long.parseLong(f[5]);
                 s.photoCount = Integer.parseInt(f[6]);
                 s.electronic = "1".equals(f[7]);
+                if (f.length >= 10) {
+                    s.startKey = Long.parseLong(f[8]);
+                    s.endKey = Long.parseLong(f[9]);
+                }
                 sessions.add(s);
             }
         } catch (Throwable t) {
@@ -183,7 +226,9 @@ final class LensLog {
                   .append(s.startTime).append('\t')
                   .append(s.endTime).append('\t')
                   .append(s.photoCount).append('\t')
-                  .append(s.electronic ? "1" : "0").append('\n');
+                  .append(s.electronic ? "1" : "0").append('\t')
+                  .append(s.startKey).append('\t')
+                  .append(s.endKey).append('\n');
             }
             byte[] buf = sb.toString().getBytes("UTF-8");
             FileOutputStream out = new FileOutputStream(file);
