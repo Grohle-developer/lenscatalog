@@ -47,6 +47,15 @@ specific to that body, so it should work on the other cameras that support PMCA 
   (e.g. `Canon EF 100-200mm f/4.5A`) and IBIS is set to the wide end, the safe
   choice (under-corrects instead of over-correcting if you zoom in later).
 - **Prime lenses**: exact focal length to IBIS and EXIF.
+- **The focal length stays in the camera.** What the app sets through the
+  camera framework lasts only while the app is open: on leaving, the body goes
+  back to what its settings store holds. So Apply also writes SteadyShot
+  Adjust: Manual and the focal length into that store (the same mechanism
+  aintfilm uses for its recipes), after a one-time **calibration**
+  (*Diagnostics › Calibrate SteadyShot*): three snapshots of the store with
+  the camera's menu set to Auto, Manual 50 mm and Manual 200 mm, from which
+  the app finds the two slots your body uses. Until then the result card
+  says the focal length is live only.
 - **Manual entry** for lenses not in the catalog (focal picker 4–1000 mm +
   optional max aperture; full custom naming by editing the JSON on a PC).
 - **Favorites** and **last used** for one-tap re-apply in the field.

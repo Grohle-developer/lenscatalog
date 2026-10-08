@@ -23,7 +23,8 @@ import java.util.List;
  * (auto-exit); MANUAL (form); ELENS (electronic lens: nothing to do).
  * LCCORR (lens-correction editor, from CONFIRM); DIAG; LOG. ADDLENS (the
  * form that adds a lens of your own, or edits one: UserLenses) and KEYBOARD
- * (its text fields, typed key by key: Keyboard).
+ * (its text fields, typed key by key: Keyboard). IBISCAL: the SteadyShot
+ * calibration, three snapshots of the camera's settings store (IbisSlots).
  * Zooms go straight to CONFIRM with the wide end: no manual focal step
  * (Berto 2026-10-06).
  *
@@ -40,7 +41,7 @@ final class MenuView extends View {
 
     static final int ST_CHECKING = 0, ST_HOME = 1, ST_FAVORITES = 2, ST_MODELS = 3,
             ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8,
-            ST_DIAG = 9, ST_LOG = 10, ST_ADDLENS = 11, ST_KEYBOARD = 12;
+            ST_DIAG = 9, ST_LOG = 10, ST_ADDLENS = 11, ST_KEYBOARD = 12, ST_IBISCAL = 13;
 
     // Palette: Sony's menu black and orange. Each value is #RGB with its digits
     // doubled, i.e. exactly one of the camera's 4-bit levels.
@@ -185,7 +186,7 @@ final class MenuView extends View {
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
             A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14,
             A_LOG = 15, A_AUTOEXIT = 16, A_DUMP = 17, A_ADDLENS = 18, A_EDITLENS = 19, A_DELLENS = 20,
-            A_SAVE = 21;
+            A_SAVE = 21, A_IBISCAL = 22, A_IBISSTEP = 23, A_IBISRESET = 24;
 
     private final Typeface regular, medium;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -296,8 +297,14 @@ final class MenuView extends View {
         title = Text.get("diagnostics");
         rows.clear();
         top = 0;
+        rows.add(new Row(Text.get("ibis_cal"), "", A_IBISCAL).icon(I_SLIDERS).chev());
         rows.add(new Row(Text.get("store_dump"), "", A_DUMP).icon(I_DOC));
         rows.add(new Row(Text.get("app_version"), "LensCatalog " + version, A_NOTHING));
+        IbisSlots.Calibration cal = IbisSlots.Calibration.decode(store.ibisCalibration());
+        Row ib = new Row(Text.get("ibis_store"), cal == null ? Text.get("ibis_uncalibrated")
+                : Text.get("ibis_calibrated") + " · " + cal.describe(), A_NOTHING);
+        ib.status = cal == null ? 2 : 1;
+        rows.add(ib);
         String n = String.valueOf(catalog.lenses.size());
         rows.add(new Row(Text.get("catalog_src"),
                 Text.fmt(catalog.userCopy ? "catalog_card" : "catalog_apk", n), A_NOTHING));
@@ -973,6 +980,13 @@ final class MenuView extends View {
         switch (r.action) {
             case A_ADDLENS: showAddLens(); break;
             case A_SAVE: saveLens(); break;
+            case A_IBISCAL: showIbisCal(); break;
+            case A_IBISSTEP: ibisRecord(); break;
+            case A_IBISRESET:
+                store.setIbisCalStep(0);
+                AppLog.i("SteadyShot calibration: started again");
+                showIbisCal();
+                break;
             case A_EDITLENS:
                 if (lens != null && lens.user) showEditLens(lens);
                 break;
@@ -1101,7 +1115,180 @@ final class MenuView extends View {
             case ST_KEYBOARD:
                 keyboardDone();
                 break;
+            case ST_IBISCAL:
+                showDiag();
+                break;
         }
+    }
+
+    // ------------------------------------------------------------ SteadyShot in the camera's store
+    /** The calibration screen: where it stands, what to do next, and the key that records the next snapshot. */
+    private void showIbisCal() {
+        state = ST_IBISCAL;
+        title = Text.get("ibis_cal");
+        rows.clear();
+        top = 0;
+        int step = store.ibisCalStep();
+        IbisSlots.Calibration cal = IbisSlots.Calibration.decode(store.ibisCalibration());
+        if (step < 3) {
+            rows.add(new Row(Text.fmt("ibis_record", String.valueOf(step + 1)), "", A_IBISSTEP).icon(I_CHECK));
+        }
+        if (step > 0 || cal != null) {
+            rows.add(new Row(Text.get("ibis_again"), "", A_IBISRESET).icon(I_RESET));
+        }
+        sel = 0;
+        invalidate();
+    }
+
+    /** What the calibration screen says above its keys. */
+    private String ibisCalText() {
+        int step = store.ibisCalStep();
+        IbisSlots.Calibration cal = IbisSlots.Calibration.decode(store.ibisCalibration());
+        if (step >= 3 && cal != null) return Text.get("ibis_done") + " (" + cal.describe() + ")";
+        switch (step) {
+            case 0: return Text.get("ibis_step1");
+            case 1: return Text.fmt("ibis_step2", String.valueOf(IbisSlots.CAL_F1));
+            default: return Text.fmt("ibis_step3", String.valueOf(IbisSlots.CAL_F2));
+        }
+    }
+
+    private java.io.File ibisFile(int step) {
+        return new java.io.File(ctx.getFilesDir(), "ibis" + step + ".txt");
+    }
+
+    /**
+     * Record the next snapshot of the store (a worker thread: thousands of
+     * slots). The third one runs the analysis; the calibration is kept in the
+     * app, and the three snapshots on the card as IBISCAL1-3.TXT, for a look
+     * on a computer.
+     */
+    private void ibisRecord() {
+        if (!NativeStore.available()) {
+            AppLog.i("SteadyShot calibration: no settings store (simulator)");
+            resultBack = new Runnable() { public void run() { showIbisCal(); } };
+            showResult(RES_WARN, Text.get("ibis_cal"), new ArrayList<String[]>(), Text.get("store_camera_only"), false);
+            return;
+        }
+        final int step = store.ibisCalStep() + 1;
+        if (step > 3) { showIbisCal(); return; }
+        showResult(RES_BUSY, Text.get("ibis_recording"), new ArrayList<String[]>(), null);
+        final String live = sony.steadyShot();
+        new Thread(new Runnable() {
+            public void run() {
+                final long t0 = System.currentTimeMillis();
+                final java.util.Map<Integer, byte[]> snap = StoreDump.scan();
+                String header = "calibration step " + step + "; " + live;
+                final String err = StoreDump.save(ibisFile(step), snap, header);
+                StoreDump.save(new java.io.File(new java.io.File(
+                        android.os.Environment.getExternalStorageDirectory(), AppLog.DIR), "IBISCAL" + step + ".TXT"), snap, header);
+                AppLog.i("SteadyShot calibration: step " + step + ", " + snap.size() + " slots in "
+                        + (System.currentTimeMillis() - t0) + " ms; " + live + (err != null ? "; not kept: " + err : ""));
+                IbisSlots.Learned learned = null;
+                if (err == null && step == 3) {
+                    try {
+                        java.util.Map<Integer, byte[]> a = IbisSlots.parse(readText(ibisFile(1)));
+                        java.util.Map<Integer, byte[]> b = IbisSlots.parse(readText(ibisFile(2)));
+                        learned = IbisSlots.learn(a, b, snap, IbisSlots.CAL_F1, IbisSlots.CAL_F2, Sony.IBIS_FOCALS);
+                        AppLog.i("SteadyShot calibration: focal candidates " + learned.focalCandidates
+                                + "; mode candidates " + learned.modeCandidates
+                                + (learned.cal != null ? "; chosen " + learned.cal.describe() : "; " + learned.error));
+                    } catch (Throwable t) {
+                        learned = new IbisSlots.Learned();
+                        learned.error = t.toString();
+                        AppLog.e("SteadyShot calibration", t);
+                    }
+                }
+                final IbisSlots.Learned result = learned;
+                post(new Runnable() {
+                    public void run() {
+                        List<String[]> l = new ArrayList<String[]>();
+                        if (err != null) {
+                            l.add(new String[] { Text.get("res_failed"), err, "bad" });
+                            resultBack = new Runnable() { public void run() { showIbisCal(); } };
+                            showResult(RES_WARN, Text.get("ibis_cal"), l, null, false);
+                            return;
+                        }
+                        if (step < 3) {
+                            store.setIbisCalStep(step);
+                            l.add(new String[] { Text.get("store_slots"), String.valueOf(snap.size()), "" });
+                            if (live.length() > 0) l.add(new String[] { "SteadyShot", live.replace("SteadyShot ", ""), "" });
+                            resultBack = new Runnable() { public void run() { showIbisCal(); } };
+                            showResult(RES_OK, Text.fmt("ibis_recorded", String.valueOf(step)), l, Text.get("ibis_next_hint"), false);
+                            return;
+                        }
+                        if (result != null && result.cal != null) {
+                            store.setIbisCalibration(result.cal.encode());
+                            store.setIbisCalStep(3);
+                            l.add(new String[] { Text.get("ibis_focal_slot"), String.format(java.util.Locale.US, "%08x · %s",
+                                    result.cal.focalSlot, IbisSlots.ENC_NAMES[result.cal.focalEnc]), "ok" });
+                            l.add(new String[] { Text.get("ibis_mode_slot"), result.cal.hasMode()
+                                    ? String.format(java.util.Locale.US, "%08x", result.cal.modeSlot) : Text.get("ibis_mode_none"),
+                                    result.cal.hasMode() ? "ok" : "warn" });
+                            resultBack = new Runnable() { public void run() { showIbisCal(); } };
+                            showResult(RES_OK, Text.get("ibis_found_title"), l, Text.get("ibis_done"), false);
+                        } else {
+                            store.setIbisCalStep(0);
+                            l.add(new String[] { Text.get("res_failed"), result == null ? "?" : result.error, "bad" });
+                            resultBack = new Runnable() { public void run() { showIbisCal(); } };
+                            showResult(RES_WARN, Text.get("ibis_notfound_title"), l, Text.get("ibis_notfound_hint"), false);
+                        }
+                    }
+                });
+            }
+        }).start();
+    }
+
+    private static String readText(java.io.File f) throws Exception {
+        byte[] b = new byte[(int) f.length()];
+        java.io.FileInputStream in = new java.io.FileInputStream(f);
+        try {
+            int n = 0, r;
+            while (n < b.length && (r = in.read(b, n, b.length - n)) > 0) n += r;
+            return new String(b, 0, n, "UTF-8");
+        } finally {
+            in.close();
+        }
+    }
+
+    /** A paragraph wrapped to a width, drawn from y down; returns the y below it. */
+    private float drawParagraph(Canvas c, String text, float x, float y, float width, float size, int color) {
+        font(regular, size, color);
+        List<String> lines = new ArrayList<String>();
+        StringBuilder line = new StringBuilder();
+        for (String word : text.split(" ")) {
+            String probe = line.length() == 0 ? word : line + " " + word;
+            if (tw(probe) <= width || line.length() == 0) {
+                line.setLength(0);
+                line.append(probe);
+            } else {
+                lines.add(line.toString());
+                line.setLength(0);
+                line.append(word);
+            }
+        }
+        if (line.length() > 0) lines.add(line.toString());
+        float lh = size + 7;
+        for (String l : lines) {
+            text(c, fit(l, width), x, y + lh / 2f, -1);
+            y += lh;
+        }
+        return y;
+    }
+
+    /** The calibration screen: why, what to do now, and the keys. */
+    private void drawIbisCal(Canvas c) {
+        drawHeader(c, I_SLIDERS, title, store.ibisCalStep() + " / 3");
+        float y = BODY_TOP + 8;
+        y = drawParagraph(c, Text.get("ibis_cal_intro"), 24, y, W - 48, 16, TEXT2) + 10;
+        round(c, 12, y, W - 12, y + 4, 2, RULE, true, 1);
+        y += 14;
+        y = drawParagraph(c, ibisCalText(), 24, y, W - 48, 18, TEXT) + 10;
+        int ry = (int) Math.max(y, BODY_BOTTOM - rows.size() * ROW_H - 4);
+        for (int i = 0; i < rows.size() && ry + ROW_H <= BODY_BOTTOM + 1; i++) {
+            drawMenuRow(c, rows.get(i), i == sel, ry, ROW_H, W - 8);
+            ry += ROW_H;
+        }
+        drawLegend(c, "", "updown", Text.get("lg_choose"), "center", Text.get("lg_record"), "MENU", Text.get("lg_back"));
     }
 
     /** Where MENU from ST_CONFIRM returns: one of ST_HOME/ST_FAVORITES/ST_MODELS/ST_MANUAL. */
@@ -1196,6 +1383,29 @@ final class MenuView extends View {
                 ibisOk ? ibis : ibis + " · " + Text.get("res_failed"), ibisOk ? "" : "bad" });
         if (done.indexOf("IBISOFF") >= 0)
             lines.add(new String[] { "SteadyShot", Text.get("ibis_off"), "warn" });
+        // Into the camera's settings store, so the focal outlives the app (IbisSlots): what the live view
+        // got is gone the moment the app closes. Needs the calibration; without it the result says so.
+        String storeNote = null;
+        boolean storeBad = false;
+        if (!sim && NativeStore.available()) {
+            int mm = Sony.ibisFocal(chosenFocal);
+            IbisSlots.Calibration cal = IbisSlots.Calibration.decode(store.ibisCalibration());
+            if (cal == null) {
+                lines.add(new String[] { Text.get("ibis_store"), Text.fmt("ibis_live_only", String.valueOf(mm)), "warn" });
+                storeNote = Text.get("ibis_apply_hint");
+                AppLog.i("SteadyShot store: not calibrated, the focal lasts only while the app is open");
+            } else {
+                IbisSlots.Written w = IbisSlots.apply(StoreDump.store(), cal, mm, Sony.IBIS_FOCALS);
+                AppLog.i("SteadyShot store: wrote " + mm + " mm (" + cal.describe() + "): holds " + w.focalNow + " mm"
+                        + (w.manual == null ? "" : w.manual ? ", manual" : ", NOT manual") + (w.error != null ? "; " + w.error : ""));
+                if (w.error == null) {
+                    lines.add(new String[] { Text.get("ibis_store"), Text.fmt("ibis_kept", String.valueOf(w.focalNow)), "ok" });
+                } else {
+                    lines.add(new String[] { Text.get("ibis_store"), w.error, "bad" });
+                    storeBad = true;
+                }
+            }
+        }
         if (sim) lines.add(new String[] { Text.get("summary_exif"), Text.get("res_sim"), "" });
         else if (done.indexOf("EXIF=ok") >= 0) lines.add(new String[] { Text.get("summary_exif"), Text.get("res_ok"), "ok" });
         else lines.add(new String[] { Text.get("summary_exif"), Text.get("res_unsupported"), "warn" });
@@ -1203,8 +1413,8 @@ final class MenuView extends View {
         lines.add(new String[] { Text.get("res_lc"),
                 (lcEnabled ? Text.get("lc_on") : Text.get("lc_off")) + (lcOk ? "" : " · " + Text.get("res_failed")),
                 lcOk ? (lcEnabled ? "on" : "") : "bad" });
-        showResult(ibisOk && lcOk ? RES_OK : RES_WARN, Text.get("applied_title"), lines,
-                sim ? Text.get("sim_note") : null);
+        showResult(ibisOk && lcOk && !storeBad ? RES_OK : RES_WARN, Text.get("applied_title"), lines,
+                sim ? Text.get("sim_note") : storeNote);
     }
 
     // ------------------------------------------------------------ geometry of lists
@@ -1643,6 +1853,7 @@ final class MenuView extends View {
                 case ST_CONFIRM: drawConfirm(c); break;
                 case ST_MANUAL: drawManual(c); break;
                 case ST_KEYBOARD: drawKeyboard(c); break;
+                case ST_IBISCAL: drawIbisCal(c); break;
                 default: drawListScreen(c); break;
             }
         } finally {

@@ -49,7 +49,17 @@ public class MainActivity extends Activity implements MenuView.Listener {
         AppLog.i("catalogue: " + (catalog.userCopy ? "card" : "built-in") + ", "
                 + catalog.lenses.size() + " lenses, " + catalog.brands.size() + " brands"
                 + (catalog.userLenses > 0 ? ", " + catalog.userLenses + " mine" : ""));
-        view.init(catalog, new Store(this), sony, lensLog, mine);
+        Store prefs = new Store(this);
+        view.init(catalog, prefs, sony, lensLog, mine);
+        // what the camera's store says SteadyShot's focal is, when the app knows where to look
+        try {
+            IbisSlots.Calibration cal = IbisSlots.Calibration.decode(prefs.ibisCalibration());
+            if (cal != null && NativeStore.available())
+                AppLog.i("SteadyShot store: holds " + IbisSlots.focalInStore(StoreDump.store(), cal, Sony.IBIS_FOCALS)
+                        + " mm (" + cal.describe() + ")");
+        } catch (Throwable t) {
+            AppLog.e("SteadyShot store", t);
+        }
         view.showChecking();
         // open the framework off the first draw; never block the UI thread long
         view.post(new Runnable() {

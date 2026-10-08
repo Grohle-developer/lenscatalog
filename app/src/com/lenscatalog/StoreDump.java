@@ -22,6 +22,46 @@ final class StoreDump {
         String error;
     }
 
+    /** Every slot the camera will give, slot -> bytes: subsystems 0x0100-0x010F, ids 0-0xFFF. */
+    static java.util.Map<Integer, byte[]> scan() {
+        java.util.Map<Integer, byte[]> m = new java.util.TreeMap<Integer, byte[]>();
+        for (int sub = 0x0100; sub <= 0x010F; sub++) {
+            for (int id = 0; id <= 0x0FFF; id++) {
+                int slot = (sub << 16) | id;
+                byte[] b = NativeStore.read(slot);
+                if (b != null && b.length > 0) m.put(slot, b);
+            }
+        }
+        return m;
+    }
+
+    /** A snapshot to a file, in the dump format (IbisSlots.format); null when written. */
+    static String save(File f, java.util.Map<Integer, byte[]> m, String header) {
+        try {
+            File d = f.getParentFile();
+            if (d != null) d.mkdirs();
+            FileOutputStream out = new FileOutputStream(f);
+            try {
+                out.write(IbisSlots.format(m, header).getBytes("UTF-8"));
+            } finally {
+                out.close();
+            }
+            return null;
+        } catch (Throwable t) {
+            return t.toString();
+        }
+    }
+
+    /** The camera's store as IbisSlots sees it. */
+    static IbisSlots.Store store() {
+        return new IbisSlots.Store() {
+            public byte[] read(int id) { return NativeStore.read(id); }
+            public int write(int id, byte[] data) { return NativeStore.write(id, data); }
+            public int attr(int id) { return NativeStore.attr(id); }
+            public void sync() { NativeStore.sync(); }
+        };
+    }
+
     static Result dump(File dir, String header) {
         Result r = new Result();
         long t0 = System.currentTimeMillis();
@@ -37,25 +77,10 @@ final class StoreDump {
                 if (!c.exists()) { f = c; break; }
             }
             if (f == null) { r.error = "999 dumps already"; return r; }
-            StringBuilder sb = new StringBuilder();
-            sb.append("# LensCatalog settings store dump; ").append(header).append('\n');
-            for (int sub = 0x0100; sub <= 0x010F; sub++) {
-                for (int id = 0; id <= 0x0FFF; id++) {
-                    int slot = (sub << 16) | id;
-                    byte[] b = NativeStore.read(slot);
-                    if (b == null || b.length == 0) continue;
-                    sb.append(String.format("%08x %d ", slot, b.length));
-                    for (byte x : b) sb.append(String.format("%02x", x & 0xff));
-                    sb.append('\n');
-                    r.slots++;
-                }
-            }
-            FileOutputStream out = new FileOutputStream(f);
-            try {
-                out.write(sb.toString().getBytes("UTF-8"));
-            } finally {
-                out.close();
-            }
+            java.util.Map<Integer, byte[]> m = scan();
+            String err = save(f, m, "dump; " + header);
+            if (err != null) { r.error = err; return r; }
+            r.slots = m.size();
             r.file = f.getName();
         } catch (Throwable t) {
             r.error = t.toString();

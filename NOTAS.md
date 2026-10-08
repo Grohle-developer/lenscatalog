@@ -545,3 +545,59 @@ app; y que el registro sea solo de LensCatalog, no compartido con aintfilm.
   JPG), simula tarjeta nueva (borra el JSN: sigue y se reescribe), simula
   reinstalación (`pm clear`: vuelve desde la tarjeta), y lo borra con OK dos
   veces. La auditoría 8.3 es el paso 13 e incluye `/LENSCAT`.
+
+## v0.4.1 — el SteadyShot no se quedaba: el almacén de ajustes (2026-10-08)
+
+Berto, con la 0.4.0 en la cámara: «al cambiar de lente, reiniciar, o da igual
+lo que hagas, no aplica en el steadyshot la distancia focal». El registro de
+la 0.3.2 ya decía `camera holds info=manual focal=60`: la llamada por
+`CameraEx` funciona, pero solo mientras la app tiene la cámara. Al salir, el
+cuerpo vuelve a lo que guarda su **almacén de ajustes** (el *backup* de
+OpenMemories: miles de *slots* numerados) y dispara con eso. aintfilm-sony lo
+sabe desde su 0.4 (`CLAUDE.md`: «la vista en vivo nunca es la última palabra
+sobre lo que la cámara conserva») y por eso escribe sus recetas en los
+*slots* (`CameraSettings`, ids de Recipe Lab). LensCatalog no escribía el
+almacén: ese era el fallo.
+
+### Qué *slots* son
+- No está publicado. Los *stubs* de OpenMemories dan
+  `Settings$CustomLauncherFunction.STEADYSHOT_ADJUSTMENT = 1069` y
+  `STEADYSHOT_FOCAL_LENGTH = 1070`, pero son ids de función del menú (tecla
+  personalizada), no *slots*. La investigación de la A7 II
+  (`a7ii-firmware-research`) encontró el de Finder/Monitor (`0x01070795` y
+  dos más) en el desensamblado, sin regla que lo derive del menú. El RTOS
+  guarda la focal como `us_steadyshot_focal_length` (uint16).
+- Así que se **descubren en la propia cámara**, como Recipe Lab y aintfilm
+  encontraron los suyos: tres instantáneas del almacén cambiando el menú entre
+  ellas (Auto; Manual 50 mm; Manual 200 mm). La focal es el *slot* que lee 50
+  en la segunda y 200 en la tercera bajo una codificación (u8, u16/u32 LE o
+  BE, o índice en la lista de focales); el modo, uno que cambia de la 1.ª a
+  la 2.ª y no de la 2.ª a la 3.ª, con valores pequeños. Lo que cambia siempre
+  (relojes, cursor del menú) se descarta solo.
+
+### Cómo queda en la app
+- `IbisSlots.java` (Java puro, `test/IbisSlotsTest.java`): el análisis
+  (`learn`), las codificaciones, la escritura con guardas (`apply`: solo los
+  dos *slots* calibrados, solo si son escribibles y del tamaño visto, solo
+  focales de la lista de la cámara; *sync* y relectura) y el formato de las
+  instantáneas (el mismo de los volcados `STORE*.TXT`).
+- **Diagnóstico › Calibrar SteadyShot**: una pantalla con los tres pasos. Cada
+  uno se registra con OK (escaneo de `0x0100-0x010F` × `0-0xFFF` en un hilo;
+  copias en `files/ibisN.txt` y en la tarjeta como `/LENSCAT/IBISCAL1-3.TXT`,
+  para analizarlas en el PC). Hay que salir de la app y cambiar el menú de la
+  cámara entre pasos (una app PMCA tapa el menú), y el paso queda guardado en
+  preferencias. El 3.º ejecuta el análisis, guarda la calibración
+  (`ibis_cal`, p. ej. `01070a2e:1;01070a2d:00:01`) y lo cuenta todo en el
+  registro (candidatos incluidos). «Empezar de nuevo» la borra.
+- **Aplicar**: tras `CameraEx`, si hay calibración escribe la focal (la más
+  cercana de `IBIS_FOCALS`) y el modo Manual en el almacén, hace *sync* y
+  relee: la tarjeta de resultado dice «SteadyShot en la cámara: 60 mm ·
+  guardado» (o el error). Sin calibración avisa: «solo mientras la app está
+  abierta» y remite a Diagnóstico. Al arrancar, el registro dice qué focal
+  tiene el almacén.
+- Diagnóstico muestra «SteadyShot en la cámara: calibrado · focal … modo …».
+- Pendiente de la cámara de Berto: hacer la calibración y mandar
+  `LENSCAT.LOG` (+ `IBISCAL*.TXT`). Con los *slots* confirmados, la siguiente
+  versión los lleva de serie para la A7 II y la calibración queda para otros
+  cuerpos.
+- En el simulador no hay almacén: la pantalla lo dice y el tour lo comprueba.
