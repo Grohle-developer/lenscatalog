@@ -229,7 +229,7 @@ shot 18-registro
 
 # ------------------------------------------------------------------ two models of one name
 say "7. Voigtlander Color Skopar 20mm: K, EF and F share one name; the EF one must open"
-key menu up up up up up up up enter down down down
+key menu up up up up up up up up enter down down down       # from View log, up through the tools to the last brands
 shot 19-modelos-mismo-nombre
 key enter
 shot 20-ficha-montura-ef
@@ -354,7 +354,8 @@ for ch in sys.argv[1]:
 PY
 }
 type_text() { # the keys of a text, a character at a time (several keys a call: the emulator takes them in order)
-  while read -r line; do KEYWAIT=0.7 key $line; done < <(keys_for "$1")
+  # (read on its own descriptor: adb shell, inside `key`, would swallow the lines left on stdin)
+  while read -r -u 3 line; do KEYWAIT=0.7 key $line; done 3< <(keys_for "$1")
 }
 MYBRAND="Meyer-Optik"; MYMODEL="Oreston 50mm f/1.8"; MYMOUNT="M42"
 MYID="my-meyer-optik-oreston-50mm-f-1-8-m42"
@@ -448,7 +449,8 @@ check "the card listing has the photographs (the audit is not vacuous)" has_phot
 check "every name on the card is 8.3, upper case" test -z "$(not83)"
 not83 | sed 's/^/  NOT 8.3: /'
 check "the app writes nothing in aintfilm's folder (/AINTFILM)" test "$(adb_ shell "ls $CARD/AINTFILM >/dev/null 2>&1 && echo yes || echo no" | tr -d '\r')" = "no"
-check "the log is the app's own: /LENSCAT/LENSCAT.LOG" bash -c 'card_log | grep -q "LensCatalog start"'
+log_has_start() { card_log | grep -q "LensCatalog start"; }
+check "the log is the app's own: /LENSCAT/LENSCAT.LOG" log_has_start
 
 say "screens in $OUT/shots, photographs in $OUT/photos"
 if [ "$fails" -eq 0 ]; then say "ALL CHECKS PASSED"; else say "$fails CHECK(S) FAILED"; fi
