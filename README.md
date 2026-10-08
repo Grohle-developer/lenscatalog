@@ -33,6 +33,7 @@ specific to that body, so it should work on the other cameras that support PMCA 
 (see the requirements below), but that has not been tried on any of them.
 
 ![home](shots/01-inicio.png) ![lens page](shots/10-ficha-zoom.png)
+![add a lens](shots/29-anadir-objetivo.png) ![keyboard](shots/30-teclado.png)
 
 ## What it does
 
