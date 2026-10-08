@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # LensCatalog: the whole workflow, end to end, on aintfilm-sony's A7 II simulator
-# (Android 2.3.7 at 640x480, keys only), in Spanish, with screenshots and checks.
+# (Android 2.3.7 at 640x480, keys only), in English by default (TOUR_LANG=es TOUR_COUNTRY=ES
+# for Spanish), with screenshots and checks.
 #
 #   ./tour.sh [apk]          default: app/out/lenscatalog.apk
 #
@@ -20,6 +21,7 @@ SIMDIR="${AINTFILM_SONY:-$HOME/aintfilm-sony}/sim"
 SIM="$SIMDIR/sim.sh"
 APK="${1:-$ROOT/app/out/lenscatalog.apk}"
 OUT="${OUT:-$ROOT/out/tour}"
+TOUR_LANG="${TOUR_LANG:-en}"; TOUR_COUNTRY="${TOUR_COUNTRY:-US}"
 export SIM_OUT="$OUT"
 ADB="${AINTFILM_SIM_HOME:-$HOME/.cache/aintfilm-sony-sim}/sdk/platform-tools/adb"
 PKG=com.lenscatalog
@@ -69,9 +71,9 @@ wait_log() { for _ in $(seq 1 "${2:-120}"); do logged "$1" && return 0; sleep 1;
 # ------------------------------------------------------------------ setup
 "$SIM" boot
 "$SIM" install "$APK"
-if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "es" ]; then
-  say "the guest in Spanish (the framework restarts)"
-  adb_ shell setprop persist.sys.language es; adb_ shell setprop persist.sys.country ES
+if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "$TOUR_LANG" ]; then
+  say "the guest in $TOUR_LANG (the framework restarts)"
+  adb_ shell setprop persist.sys.language "$TOUR_LANG"; adb_ shell setprop persist.sys.country "$TOUR_COUNTRY"
   adb_ shell stop; sleep 2; adb_ shell start; sleep 90
 fi
 adb_ shell pm clear $PKG >/dev/null
