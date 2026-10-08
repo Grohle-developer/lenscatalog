@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Mamiya">
+  <title>Mamiya</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#225577"/>
+    <path d="M32 -4V68M-4 32H68" fill="none" stroke="#557799" stroke-width="3"/><circle cx="32" cy="32" r="20" fill="none" stroke="#557799" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#113355"/>
+  </g>
+  <path d="M23.96 38.19 29.72 22.86H34.23V42.86H30.76V36.27L31.09 27.48L25.2 42.86H22.71L16.82 27.46L17.16 36.27V42.86H13.7V22.86H18.2ZM46.89 42.86Q46.64 42.35 46.51 41.46Q44.93 43.14 42.59 43.14Q40.37 43.14 38.95 41.86Q37.54 40.58 37.54 38.69Q37.54 36.31 39.31 35.05Q41.08 33.78 44.29 33.78H46.4V32.81Q46.4 31.64 45.74 30.95Q45.09 30.25 43.79 30.25Q42.59 30.25 41.88 30.84Q41.18 31.43 41.18 32.29H37.85Q37.85 30.53 39.51 29.13Q41.16 27.73 43.98 27.73Q46.48 27.73 48.11 29Q49.73 30.28 49.73 32.84V39.43Q49.73 41.43 50.3 42.63V42.86ZM46.4 38.67V35.87H44.36Q40.86 35.95 40.86 38.36Q40.86 39.25 41.46 39.85Q42.07 40.46 43.22 40.46Q44.38 40.46 45.21 39.9Q46.05 39.35 46.4 38.67Z" fill="#ffffff"/>
+</svg>

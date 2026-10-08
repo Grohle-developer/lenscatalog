@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="MTO">
+  <title>MTO</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#226644"/>
+    <path d="M-4 44L32 22L68 44" fill="none" stroke="#558877" stroke-width="3"/><path d="M-4 56L32 34L68 56" fill="none" stroke="#558877" stroke-width="3"/><path d="M-4 68L32 46L68 68" fill="none" stroke="#558877" stroke-width="3"/><path d="M-4 80L32 58L68 80" fill="none" stroke="#558877" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114433"/>
+  </g>
+  <path d="M22.73 38.33 28.48 23H32.99V43H29.53V36.41L29.86 27.62L23.96 43H21.48L15.59 27.6L15.93 36.41V43H12.47V23H16.96ZM35.67 25.79V23H51.53V25.79H45.31V43H41.85V25.79Z" fill="#ffffff"/>
+</svg>

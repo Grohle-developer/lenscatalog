@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Soligor">
+  <title>Soligor</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <path d="M32 -4V68M-4 32H68" fill="none" stroke="#aa7733" stroke-width="3"/><circle cx="32" cy="32" r="20" fill="none" stroke="#aa7733" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M32.85 38.25Q32.85 37.07 32.06 36.34Q31.27 35.61 28.42 34.72Q25.57 33.84 23.79 32.46Q22.01 31.08 22.01 28.67Q22.01 26.26 23.97 24.7Q25.93 23.14 29.1 23.14Q32.49 23.14 34.4 24.94Q36.31 26.75 36.31 29.25H32.85Q32.85 27.78 31.93 26.84Q31.01 25.9 29.06 25.9Q27.23 25.9 26.36 26.69Q25.49 27.48 25.49 28.66Q25.49 29.79 26.53 30.52Q27.58 31.26 29.68 31.87Q33.07 32.86 34.7 34.35Q36.33 35.83 36.33 38.22Q36.33 40.75 34.4 42.22Q32.47 43.69 29.21 43.69Q27.29 43.69 25.5 42.99Q23.7 42.29 22.54 40.88Q21.38 39.48 21.38 37.37H24.86Q24.86 39.26 26.11 40.1Q27.37 40.94 29.21 40.94Q31.02 40.94 31.94 40.2Q32.85 39.46 32.85 38.25ZM42.62 22.31V43.41H39.28V22.31Z" fill="#ffffff"/>
+</svg>

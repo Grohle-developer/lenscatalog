@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Ricoh">
+  <title>Ricoh</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <path d="M-44 72L-4 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M-32 72L8 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M-20 72L20 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M-8 72L32 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M4 72L44 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M16 72L56 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M28 72L68 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M40 72L80 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M52 72L92 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M64 72L104 -8" fill="none" stroke="#448888" stroke-width="3"/><path d="M76 72L116 -8" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M32.84 43.25 28.83 35.55H24.95V43.25H21.48V23.25H28.52Q31.97 23.25 33.85 24.79Q35.73 26.33 35.73 29.28Q35.73 31.29 34.75 32.65Q33.78 34.01 32.06 34.72L36.55 43.08V43.25ZM24.95 26.04V32.76H28.52Q30.39 32.76 31.33 31.82Q32.27 30.88 32.27 29.45Q32.27 27.91 31.39 26.98Q30.51 26.06 28.57 26.04ZM38.72 24.52Q38.72 23.75 39.23 23.25Q39.73 22.75 40.62 22.75Q41.51 22.75 42.01 23.25Q42.52 23.75 42.52 24.52Q42.52 25.29 42.01 25.79Q41.51 26.29 40.62 26.29Q39.73 26.29 39.23 25.79Q38.72 25.29 38.72 24.52ZM42.27 28.39V43.25H38.93V28.39Z" fill="#ffffff"/>
+</svg>

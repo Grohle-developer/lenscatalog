@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Industar">
+  <title>Industar</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#aa3300"/>
+    <circle cx="46" cy="18" r="8" fill="none" stroke="#bb6633" stroke-width="3"/><circle cx="46" cy="18" r="15" fill="none" stroke="#bb6633" stroke-width="3"/><circle cx="46" cy="18" r="22" fill="none" stroke="#bb6633" stroke-width="3"/><circle cx="46" cy="18" r="29" fill="none" stroke="#bb6633" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#662200"/>
+  </g>
+  <path d="M25.63 23V43H22.17V23ZM35.87 30.58Q33.88 30.58 32.87 32.4V43H29.53V28.14H32.68L32.79 29.84Q34.42 27.86 37.09 27.86Q39.23 27.86 40.52 29.1Q41.81 30.34 41.83 33.32V43H38.49V33.36Q38.49 31.82 37.82 31.2Q37.16 30.58 35.87 30.58Z" fill="#ffffff"/>
+</svg>

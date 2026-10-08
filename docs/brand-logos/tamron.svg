@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Tamron">
+  <title>Tamron</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#226644"/>
+    <path d="M-44 72L-4 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M-32 72L8 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M-20 72L20 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M-8 72L32 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M4 72L44 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M16 72L56 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M28 72L68 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M40 72L80 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M52 72L92 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M64 72L104 -8" fill="none" stroke="#558877" stroke-width="3"/><path d="M76 72L116 -8" fill="none" stroke="#558877" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114433"/>
+  </g>
+  <path d="M12.38 25.79V23H28.24V25.79H22.02V43H18.56V25.79ZM36.75 30.58Q34.73 30.58 33.89 32.23V43H30.56V28.14H33.7L33.79 29.69Q35.37 27.86 38.09 27.86Q41.05 27.86 42.16 30.13Q43.79 27.86 46.73 27.86Q49 27.86 50.3 29.13Q51.61 30.39 51.62 33.3V43H48.28V33.36Q48.28 31.71 47.56 31.15Q46.84 30.58 45.61 30.58Q44.47 30.58 43.74 31.2Q43.02 31.82 42.75 32.81V43H39.41V33.38Q39.41 31.82 38.7 31.2Q37.98 30.58 36.75 30.58Z" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fotasy">
+  <title>Fotasy</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#553388"/>
+    <path d="M32 -4V68M-4 32H68" fill="none" stroke="#775599" stroke-width="3"/><circle cx="32" cy="32" r="20" fill="none" stroke="#775599" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#332255"/>
+  </g>
+  <path d="M17.83 42.86V22.86H30.52V25.65H21.29V31.61H29.34V34.39H21.29V42.86ZM32.35 35.29Q32.35 32.07 34.18 29.9Q36 27.73 39.25 27.73Q42.47 27.73 44.29 29.84Q46.11 31.96 46.17 35.12V35.58Q46.17 38.82 44.35 40.98Q42.53 43.14 39.27 43.14Q36 43.14 34.18 40.98Q32.35 38.82 32.35 35.58ZM35.67 35.58Q35.67 37.59 36.53 39.02Q37.39 40.46 39.27 40.46Q41.11 40.46 41.97 39.02Q42.83 37.59 42.83 35.58V35.29Q42.83 33.33 41.97 31.87Q41.11 30.4 39.25 30.4Q37.39 30.4 36.53 31.87Q35.67 33.33 35.67 35.29Z" fill="#ffffff"/>
+</svg>

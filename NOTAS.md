@@ -12,7 +12,7 @@ lenscatalog/
     AndroidManifest.xml      package com.lenscatalog, minSdk/targetSdk 10
     build.sh                 receta adaptada (javac + d8, sin NDK)
     res/values/strings.xml
-    assets/lenses.json       catálogo: 1187 objetivos, 48 marcas (lensfun)
+    assets/lenses.json       catálogo: 1956 objetivos, 62 marcas (lensfun + ampliación propia)
     assets/fonts/            Roboto Regular/Medium recortadas + licencia Apache-2.0
     src/com/lenscatalog/
       MainActivity.java      activity + dispatchKeyEvent por scan codes
@@ -453,3 +453,18 @@ investigación de qué campo lee cada programa. Resultado:
   20; la auditoría 8.3 del tour comprueba que la lista no está vacía.
 - Pendiente de Berto: qué programa usa (si es el Explorador, con la 0.3.3 ya
   debería verse; si es Lightroom, «Leer metadatos del archivo»).
+
+## Catálogo ampliado (2026-10-08) y logos de marca
+
+- `tools/extend_catalog.py` añade 769 objetivos y 14 marcas nuevas a
+  `lenses.json` (1187 → 1956 lentes, 48 → 62 marcas, 185 → 296 KB). Solo
+  datos factuales (marca, modelo, montura, focal, apertura máx.); las
+  entradas existentes no se tocan y el script es idempotente (salta lo que
+  ya existe por marca+modelo+montura). Monturas nuevas: AR, Fujica X, QBM,
+  Praktica B, Topcon RE, R. Probar en cámara que 296 KB de JSON cargan bien.
+- `tools/gen_brand_logos.py` genera `docs/brand-logos/<marca>.svg` (62 logos
+  originales 64×64, colores RGBA4444 exactos) + `index.json`. Pendiente:
+  dibujarlos a la izquierda de cada marca en `MenuView` (la cámara no
+  renderiza SVG: habrá que rasterizarlos a PNG o replicar las formas).
+- Datos dudosos heredados de lensfun (no corregidos): p. ej. Leica
+  `Elmarit-M 1:2.8/28 Asph.` figura con `max_aperture` 2.0.

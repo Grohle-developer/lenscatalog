@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Nikon">
+  <title>Nikon</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#666600"/>
+    <polygon points="62.0,32.0 47.0,58.0 17.0,58.0 2.0,32.0 17.0,6.0 47.0,6.0" fill="none" stroke="#888833" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#444400"/>
+  </g>
+  <path d="M36.14 23.25V43.25H32.67L23.74 29.06V43.25H20.28V23.25H23.74L32.69 37.48V23.25ZM39.93 24.52Q39.93 23.75 40.43 23.25Q40.94 22.75 41.83 22.75Q42.72 22.75 43.22 23.25Q43.72 23.75 43.72 24.52Q43.72 25.29 43.22 25.79Q42.72 26.29 41.83 26.29Q40.94 26.29 40.43 25.79Q39.93 25.29 39.93 24.52ZM43.48 28.39V43.25H40.14V28.39Z" fill="#ffffff"/>
+</svg>

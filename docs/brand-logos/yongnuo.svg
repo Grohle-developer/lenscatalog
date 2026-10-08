@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Yongnuo">
+  <title>Yongnuo</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <path d="M-4 16Q8 6 20 16T44 16T68 16" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 30Q8 20 20 30T44 30T68 30" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 44Q8 34 20 44T44 44T68 44" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 58Q8 48 20 58T44 58T68 58" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M20.36 23 24.95 32.46 29.55 23H33.39L26.69 35.64V43H23.2V35.64L16.5 23ZM41.54 30.58Q39.55 30.58 38.55 32.4V43H35.21V28.14H38.35L38.46 29.84Q40.1 27.86 42.76 27.86Q44.91 27.86 46.2 29.1Q47.49 30.34 47.5 33.32V43H44.16V33.36Q44.16 31.82 43.5 31.2Q42.83 30.58 41.54 30.58Z" fill="#ffffff"/>
+</svg>

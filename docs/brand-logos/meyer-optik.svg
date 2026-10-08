@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Meyer-Optik">
+  <title>Meyer-Optik</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <path d="M-4 16Q8 6 20 16T44 16T68 16" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-4 30Q8 20 20 30T44 30T68 30" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-4 44Q8 34 20 44T44 44T68 44" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-4 58Q8 48 20 58T44 58T68 58" fill="none" stroke="#aa7733" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M21.97 38.33 27.72 23H32.23V43H28.77V36.41L29.09 27.62L23.2 43H20.72L14.82 27.6L15.17 36.41V43H11.7V23H16.2ZM52.3 33.51Q52.3 38.07 50.02 40.67Q47.75 43.27 44.01 43.27Q40.36 43.27 38.02 40.67Q35.69 38.07 35.69 33.51V32.51Q35.69 27.95 38.01 25.34Q40.33 22.73 43.98 22.73Q47.72 22.73 50.01 25.34Q52.3 27.95 52.3 32.51ZM48.82 32.48Q48.82 29.11 47.54 27.35Q46.27 25.6 43.98 25.6Q41.76 25.6 40.46 27.35Q39.16 29.11 39.16 32.48V33.51Q39.16 36.87 40.48 38.65Q41.79 40.42 44.01 40.42Q46.32 40.42 47.57 38.65Q48.82 36.87 48.82 33.51Z" fill="#ffffff"/>
+</svg>

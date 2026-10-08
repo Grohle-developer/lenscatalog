@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Beroflex">
+  <title>Beroflex</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <path d="M-44 72L-4 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-32 72L8 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-20 72L20 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M-8 72L32 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M4 72L44 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M16 72L56 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M28 72L68 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M40 72L80 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M52 72L92 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M64 72L104 -8" fill="none" stroke="#aa7733" stroke-width="3"/><path d="M76 72L116 -8" fill="none" stroke="#aa7733" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M33.41 37.86Q33.41 40.73 31.56 42.21Q29.71 43.69 26.48 43.69H19.15V23.69H25.99Q29.26 23.69 31.1 25Q32.94 26.3 32.94 29.11Q32.94 30.47 32.2 31.57Q31.46 32.68 30.03 33.27Q31.75 33.72 32.58 35.01Q33.41 36.29 33.41 37.86ZM22.61 26.48V32.1H26.02Q27.65 32.1 28.56 31.37Q29.47 30.63 29.47 29.3Q29.47 26.55 26.16 26.48ZM29.95 37.84Q29.95 34.77 26.83 34.67H22.61V40.92H26.48Q28.19 40.92 29.07 40.07Q29.95 39.22 29.95 37.84ZM44.11 31.29H41.1V43.69H37.75V31.29H35.48V28.83H37.75V27.42Q37.75 24.93 39.15 23.62Q40.55 22.31 42.97 22.31Q43.89 22.31 44.85 22.55L44.77 25.16Q44.19 25.05 43.48 25.05Q41.13 25.05 41.1 27.36V28.83H44.11Z" fill="#ffffff"/>
+</svg>

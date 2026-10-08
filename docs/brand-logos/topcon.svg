@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Topcon">
+  <title>Topcon</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#333333"/>
+    <path d="M-4 44L32 22L68 44" fill="none" stroke="#666666" stroke-width="3"/><path d="M-4 56L32 34L68 56" fill="none" stroke="#666666" stroke-width="3"/><path d="M-4 68L32 46L68 68" fill="none" stroke="#666666" stroke-width="3"/><path d="M-4 80L32 58L68 80" fill="none" stroke="#666666" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#222222"/>
+  </g>
+  <path d="M16.4 22.93V20.14H32.26V22.93H26.04V40.14H22.58V22.93ZM41.82 40.42Q39.39 40.42 37.91 38.81V45.86H34.58V25.28H37.65L37.78 26.78Q39.28 25.01 41.79 25.01Q44.62 25.01 46.11 27.09Q47.6 29.18 47.6 32.59V32.86Q47.6 36.1 46.11 38.26Q44.61 40.42 41.82 40.42ZM40.86 27.73Q38.8 27.73 37.91 29.44V35.99Q38.83 37.74 40.89 37.74Q42.67 37.74 43.47 36.29Q44.27 34.84 44.27 32.85V32.57Q44.27 30.57 43.46 29.15Q42.66 27.73 40.86 27.73Z" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Pentax">
+  <title>Pentax</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <circle cx="0" cy="0" r="22" fill="#aa7733"/><circle cx="64" cy="64" r="22" fill="#aa7733"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M20.61 35.57V43H17.15V23H24.8Q28.28 23 30.18 24.8Q32.08 26.6 32.08 29.36Q32.08 32.26 30.18 33.91Q28.28 35.57 24.8 35.57ZM20.61 25.79V32.78H24.8Q26.82 32.78 27.71 31.83Q28.59 30.88 28.59 29.39Q28.59 27.99 27.71 26.89Q26.82 25.79 24.8 25.79ZM37.38 28.14 40.16 33.03 42.99 28.14H46.68L42.15 35.45L46.85 43H43.15L40.19 37.92L37.23 43H33.52L38.22 35.45L33.69 28.14Z" fill="#ffffff"/>
+</svg>

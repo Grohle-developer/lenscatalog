@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Minolta">
+  <title>Minolta</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <circle cx="46" cy="18" r="8" fill="none" stroke="#aa7733" stroke-width="3"/><circle cx="46" cy="18" r="15" fill="none" stroke="#aa7733" stroke-width="3"/><circle cx="46" cy="18" r="22" fill="none" stroke="#aa7733" stroke-width="3"/><circle cx="46" cy="18" r="29" fill="none" stroke="#aa7733" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M23.98 38.33 29.74 23H34.25V43H30.78V36.41L31.11 27.62L25.22 43H22.73L16.84 27.6L17.19 36.41V43H13.72V23H18.22ZM44.31 30.58Q42.32 30.58 41.32 32.4V43H37.98V28.14H41.13L41.24 29.84Q42.87 27.86 45.54 27.86Q47.68 27.86 48.97 29.1Q50.26 30.34 50.28 33.32V43H46.94V33.36Q46.94 31.82 46.27 31.2Q45.61 30.58 44.31 30.58Z" fill="#ffffff"/>
+</svg>
