@@ -29,7 +29,9 @@ public class MainActivity extends Activity implements MenuView.Listener {
         try {
             java.io.File ext = android.os.Environment.getExternalStorageDirectory();
             AppLog.init(new java.io.File(ext, "AINTFILM"));
-            AppLog.i("LensCatalog start");
+            // Stamp the log with the camera's clock (Android's starts at 1970 on the camera).
+            AppLog.setCameraClock(Sony.cameraLocalMillis());
+            AppLog.i("LensCatalog start" + (AppLog.hasCameraClock() ? " (camera clock)" : ""));
         } catch (Throwable t) {
             // ignore
         }

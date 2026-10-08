@@ -9,4 +9,8 @@ rm -rf "$OUT" && mkdir -p "$OUT/classes"
 JAVAC="${JAVA_HOME:+$JAVA_HOME/bin/}javac"
 "$JAVAC" -encoding UTF-8 --release 8 -Xlint:-options -d "$OUT/classes" src/com/lenscatalog/ExifWriter.java src/com/lenscatalog/XmpSidecar.java test/ExifCli.java
 python3 test/exif_fixtures.py "$OUT/fixtures"
+# a card that refuses to rename over a file, for the writer's fallbacks (needs a C compiler; skipped without one)
+if command -v cc >/dev/null; then
+  cc -shared -fPIC -o "$OUT/rename_shim.so" test/rename_shim.c -ldl && export RENAME_SHIM="$OUT/rename_shim.so"
+fi
 python3 test/exif_check.py "$OUT/classes" "$OUT/fixtures"

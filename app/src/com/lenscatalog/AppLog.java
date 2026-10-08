@@ -5,16 +5,22 @@ import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.TimeZone;
 
 /**
  * A log on the memory card (/AINTFILM/AINTFILM.LOG), so that what happened on a
  * camera nobody can attach a debugger to can be read on a computer afterwards.
  * Kept under 512 KB by rolling once to AINTFILM.OLD. Both names are 8.3 and
- * upper case: the camera's card takes no other kind (Names.is83).
+ * upper case: the camera's card takes no other kind.
  *
  * Every line also goes to the {@link Sink} the activity installs (logcat), so
- * this class, and the caches that log through it, compile and are tested on a
- * bare JDK (tools/test.sh).
+ * this class compiles and is tested on a bare JDK.
+ *
+ * The stamp: on the camera, Android's own clock starts at 1970 at every
+ * power-on (the camera keeps the real date elsewhere, and writes it into the
+ * photographs), so lines are stamped with the camera's clock when the activity
+ * has read it (Sony's TimeUtil, {@link #setCameraClock}), and otherwise, while
+ * Android's clock still says 1970, with the time since power-on ("boot+").
  */
 final class AppLog {
     private AppLog() {}
@@ -28,6 +34,15 @@ final class AppLog {
     static volatile Sink sink;
     private static File file;
     private static final SimpleDateFormat TIME = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+    /** The camera's clock is local time with no zone: formatted as it is. */
+    private static final SimpleDateFormat CAMERA_TIME = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+    static {
+        CAMERA_TIME.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
+    /** 2000-01-01: an Android clock before it has not been set (the camera's counts from power-on). */
+    private static final long CLOCK_SET = 946684800000L;
+    /** The camera's clock (its local time, as millis since 1970 UTC) at androidBase, or Long.MIN_VALUE. */
+    private static long cameraBase = Long.MIN_VALUE, androidBase;
 
     static synchronized void init(File dir) {
         dir.mkdirs();
@@ -40,6 +55,36 @@ final class AppLog {
         }
     }
 
+    /**
+     * The camera's clock, as the activity read it: its local time, as millis
+     * since 1970 UTC (Sony.cameraLocalMillis). Long.MIN_VALUE: not available.
+     * From here on, lines are stamped with it, advanced by Android's clock.
+     */
+    static synchronized void setCameraClock(long cameraLocalMillis) {
+        cameraBase = cameraLocalMillis;
+        androidBase = System.currentTimeMillis();
+    }
+
+    /** Whether the camera's clock is known. */
+    static synchronized boolean hasCameraClock() { return cameraBase != Long.MIN_VALUE; }
+
+    /** The stamp of a line written now. */
+    static synchronized String stamp() {
+        long now = System.currentTimeMillis();
+        if (cameraBase != Long.MIN_VALUE) return CAMERA_TIME.format(new Date(cameraBase + (now - androidBase)));
+        if (now < CLOCK_SET) {
+            long s = now / 1000;
+            return String.format(Locale.US, "boot+%02d:%02d:%02d.%03d", s / 3600, (s / 60) % 60, s % 60, now % 1000);
+        }
+        return TIME.format(new Date(now));
+    }
+
+    /** What the clock says now, for the diagnostics screen. */
+    static synchronized String clockText() {
+        String s = stamp();
+        return s.substring(0, s.length() - 4) + (cameraBase != Long.MIN_VALUE ? "" : s.startsWith("boot+") ? "" : " (Android)");
+    }
+
     static synchronized void i(String msg) {
         Sink k = sink;
         if (k != null) k.line(msg);
@@ -47,7 +92,7 @@ final class AppLog {
         try {
             FileOutputStream out = new FileOutputStream(file, true);
             try {
-                out.write((TIME.format(new Date()) + "  " + msg + "\n").getBytes("UTF-8"));
+                out.write((stamp() + "  " + msg + "\n").getBytes("UTF-8"));
             } finally {
                 out.close();
             }

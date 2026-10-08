@@ -361,3 +361,95 @@ sobreviviera al salir de la app: volcar, cambiar en el menú Ajuste SteadyShot
 dice el slot; entonces LensCatalog lo escribiría como aintfilm escribe los
 suyos. La app deja de ser "Java puro": `build.sh` compila la librería si hay
 NDK (sin NDK, construye sin ella).
+
+## v0.3.3 — segundo registro de la cámara (2026-10-08): JPG, nombre del objetivo, reloj
+
+Con la 0.3.2 en la A7 II (AINTFILM.LOG de Berto): el SteadyShot ya entra
+(`SteadyShot: asked manual 60 mm (lens 58 mm); camera holds info=manual
+focal=60 mode=onetime`), `setExifInfo ok`, las fotos ya casan con la sesión
+por numeración (`tagger: session Helios 44M-4 58mm 1:2`), el ARW se
+etiqueta… y el JPG falla:
+`FAIL DSC02073.JPG: FileNotFoundException: …/DSC02073.JPG.exiftmp: open
+failed: ENOENT`. La tarjeta de la cámara solo admite nombres 8.3 (regla de
+aintfilm-sony, confirmada): el temporal del JPG no podía crearse.
+
+- **JPG**: el temporal es ahora `DSC02073.TMP` (`ExifWriter.tempFor`, 8.3
+  mayúsculas) y la reescritura es en *streaming* (solo las cabeceras en
+  memoria, copia por búfer de 64 KB): antes se cargaba el JPG entero (10-15
+  MB) más una copia, en un heap pequeño. Si falla a medias, el `.TMP` se
+  borra y el original queda intacto.
+- **Fabricante y modelo**: Berto ve el ARW etiquetado pero "sin fabricante ni
+  modelo". Se escribía solo `LensModel` (0xA434). Ahora también `LensMake`
+  (0xA433, la marca del catálogo; vacío en datos manuales),
+  `LensSpecification` (0xA432: rango focal + f) y `MaxApertureValue` (0x9205,
+  APEX) — lo que leen Windows ("Fabricante/Modelo del objetivo"), Lightroom
+  ("Lens") y exiftool. El XMP lleva `exifEX:LensMake` y `aux:LensInfo`. Las
+  sesiones (`LensLog`) guardan marca y rango (columnas 10-12; los ficheros
+  antiguos siguen cargando). Qué programa usa Berto y qué campo lee
+  (MakerNote de Sony vs EXIF) sigue pendiente: ver la investigación en el PR.
+- **Reloj**: la fecha de la cámara es correcta (las fotos la llevan), pero el
+  Android de dentro arranca en 1970. El registro se marcaba con ese reloj.
+  `com.sony.scalar.sysutil.TimeUtil.getCurrentCalendar()` (stubs de
+  OpenMemories: `PlainCalendar` con year/month/day/hour/minute/second) da la
+  hora real de la cámara: `AppLog` la usa por reflexión
+  (`Sony.cameraLocalMillis`, mes tomado como 1-12; si saliera un mes de menos,
+  es 0-11), y sin ella marca `boot+HH:MM:SS` (tiempo desde el encendido) en
+  vez de una fecha falsa. Diagnóstico muestra "Reloj de la cámara".
+- **Catálogo propio**: `/DCIM/LENSES/lenses.json` nunca pudo verse en la
+  cámara (no es 8.3): se acepta `LENSES.JSN`, y la forma en que la tarjeta
+  muestra un `lenses.json` copiado desde el PC (`LENSES~1.JSO`).
+- El `msdos` de Linux no sirve para simular la tarjeta (trunca los nombres
+  largos en vez de rechazarlos, y los devuelve en minúsculas); el tour audita
+  al final que todo lo que la app dejó en la tarjeta es 8.3, y el test de host
+  cubre el nombre temporal.
+
+### Revisión adversaria, XMP incrustado y qué lee cada programa
+
+Antes de cerrar la 0.3.3 pasó por una revisión adversaria (workflow) y una
+investigación de qué campo lee cada programa. Resultado:
+
+- **Bloqueante confirmado y corregido**: si la tarjeta rechazaba
+  `renameTo(TMP → JPG)`, el *fallback* borraba el original antes de volver a
+  intentar el renombrado, y el `finally` borraba el temporal: con un segundo
+  fallo la foto desaparecía. Ahora el original no se toca hasta que el nuevo
+  está en su sitio: si el renombrado por encima falla, el original pasa a
+  `DSC02073.OLD`, el nuevo entra, y solo entonces se borra el `.OLD`. Si ni
+  eso puede, el `.OLD` vuelve a su nombre; y si tampoco, el error dice
+  «left as DSC02073.OLD» y la siguiente pasada lo recupera antes de
+  etiquetar. `app/test/rename_shim.c` (LD_PRELOAD sobre `rename`/`renameat`)
+  inyecta los tres fallos en `exif-test.sh`: etiquetado vía `.OLD`; fallo
+  total con foto byte-idéntica y sin restos; y recuperación en la pasada
+  siguiente.
+- **Quién lee qué** (documentación y foros de cada programa, 2026-10-08):
+  Lightroom muestra `LensModel` del EXIF del propio raw (no tiene campo para
+  el fabricante; una foto ya importada necesita *Metadatos › Leer metadatos
+  del archivo*; el `aux:Lens` del sidecar es su respaldo). Capture One nombra
+  los objetivos Sony por su propia base de datos a partir del `LensType` del
+  MakerNote, y para uno adaptado compone «58mm f/2» con `FocalLength` y
+  `MaxApertureValue` (por eso se escriben). **El Explorador de Windows** —
+  lo más probable, por el «fabricante y modelo» que Berto echa en falta —
+  lee «Modelo del objetivo» y «Fabricante del objetivo» *solo* del XMP
+  incrustado en el archivo, espacio de nombres `MicrosoftPhoto`
+  (`http://ns.microsoft.com/photo/1.0/`): ni del EXIF ni del sidecar. macOS
+  (ImageIO) lee `LensModel` del EXIF. Imaging Edge de Sony puede negarse a
+  abrir un ARW tocado por otro programa (sin verificar; el sensor y el
+  MakerNote están byte a byte).
+- **XMP incrustado**: `XmpSidecar.packet(lens)` es ahora un solo paquete
+  con `exifEX:*`, `aux:*`, `MicrosoftPhoto:*`, `exif:FocalLength` y
+  `exif:FNumber`, marcado `x:xmptk="LensCatalog"` para que una pasada
+  posterior sepa que puede sustituirlo. En el **JPG** va como APP1
+  (`http://ns.adobe.com/xap/1.0/\0`) detrás del Exif, sustituyendo el nuestro
+  de una pasada anterior y respetando uno ajeno (entonces no se añade). En el
+  **ARW** va como etiqueta 0x02BC (BYTE) en IFD0: como IFD0 crece una entrada,
+  se añade al final del archivo una copia del IFD0 (con su enlace al IFD
+  siguiente), el nuevo Exif IFD y el paquete, y lo único que cambia de los
+  bytes de la cámara son los 4 del desplazamiento del IFD0 en la cabecera
+  (bytes 4-7; se escriben los últimos, tras `sync`, para que un corte deje el
+  archivo como estaba). El test comprueba que el cambio en el ARW se limita a
+  esos bytes y que rawpy decodifica lo mismo.
+- Menores de la misma revisión: la clave `tagged_` de PhotoTagger lleva la
+  carpeta (`100MSDCF/DSC00001.JPG`), que antes chocaba entre carpetas;
+  `LensLog` guarda en temporal y renombra, y conserva 60 sesiones en vez de
+  20; la auditoría 8.3 del tour comprueba que la lista no está vacía.
+- Pendiente de Berto: qué programa usa (si es el Explorador, con la 0.3.3 ya
+  debería verse; si es Lightroom, «Leer metadatos del archivo»).

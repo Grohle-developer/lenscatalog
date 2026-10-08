@@ -38,8 +38,8 @@ final class Catalog {
     static Catalog load(Context ctx) {
         Catalog c = new Catalog();
         String json = null;
-        File user = new File(Environment.getExternalStorageDirectory(), "DCIM/LENSES/lenses.json");
-        if (user.isFile()) {
+        File user = userCopy(new File(Environment.getExternalStorageDirectory(), "DCIM/LENSES"));
+        if (user != null && user.isFile()) {
             try {
                 json = readFile(user);
                 c.userCopy = true;
@@ -88,6 +88,25 @@ final class Catalog {
             }
         }
         return c;
+    }
+
+    /**
+     * The user's catalogue in /DCIM/LENSES: lenses.json as the README says, or
+     * what that becomes on the camera's card, which holds 8.3 names only (a
+     * computer's "lenses.json" shows there as LENSES~1.JSO), or LENSES.JSN, a
+     * name that fits as it is. Null when there is none.
+     */
+    static File userCopy(File dir) {
+        String[] names = dir.list();
+        if (names == null) return null;
+        File found = null;
+        for (String n : names) {
+            String l = n.toLowerCase();
+            if (l.equals("lenses.json")) return new File(dir, n);
+            if (l.startsWith("lenses") && (l.endsWith(".json") || l.endsWith(".jso") || l.endsWith(".jsn")))
+                found = new File(dir, n);
+        }
+        return found;
     }
 
     private static Catalog loadSeed(Context ctx) {

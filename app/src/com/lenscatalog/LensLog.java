@@ -21,7 +21,7 @@ import java.util.List;
  */
 final class LensLog {
     /** Maximum sessions kept (plus the current one). */
-    static final int MAX = 20;
+    static final int MAX = 60;
 
     static final class Session {
         String id;           // catalog id, "manual:<focal>", or "electronic"
@@ -36,6 +36,10 @@ final class LensLog {
         // its photographs are startKey <= key < endKey. -1: not known (a
         // session logged before 0.3.2, or still open).
         long startKey = -1, endKey = -1;
+        // The lens as the tags want it (0.3.3): its maker ("" when none or
+        // unknown) and its focal range (0 when unknown).
+        String make = "";
+        int focalMin, focalMax;
 
         boolean isCurrent() { return endTime == 0; }
     }
@@ -57,6 +61,13 @@ final class LensLog {
     /** A new session whose photographs start at `key` in the camera's sequence (CardSeq.next). */
     synchronized void startSession(String id, String displayName, int focal,
                                    double aperture, boolean electronic, long key) {
+        startSession(id, displayName, focal, aperture, electronic, key, "", focal, focal);
+    }
+
+    /** The same, with the lens's maker and focal range (what EXIF's LensMake and LensSpecification say). */
+    synchronized void startSession(String id, String displayName, int focal,
+                                   double aperture, boolean electronic, long key,
+                                   String make, int focalMin, int focalMax) {
         long now = System.currentTimeMillis();
         endCurrentSession(now, key);
         Session s = new Session();
@@ -69,6 +80,9 @@ final class LensLog {
         s.photoCount = 0;
         s.electronic = electronic;
         s.startKey = key;
+        s.make = make == null ? "" : make;
+        s.focalMin = focalMin;
+        s.focalMax = focalMax;
         sessions.add(s);
         prune();
         save();
@@ -207,6 +221,11 @@ final class LensLog {
                     s.startKey = Long.parseLong(f[8]);
                     s.endKey = Long.parseLong(f[9]);
                 }
+                if (f.length >= 13) {
+                    s.make = f[10];
+                    s.focalMin = Integer.parseInt(f[11]);
+                    s.focalMax = Integer.parseInt(f[12]);
+                }
                 sessions.add(s);
             }
         } catch (Throwable t) {
@@ -228,12 +247,24 @@ final class LensLog {
                   .append(s.photoCount).append('\t')
                   .append(s.electronic ? "1" : "0").append('\t')
                   .append(s.startKey).append('\t')
-                  .append(s.endKey).append('\n');
+                  .append(s.endKey).append('\t')
+                  .append(s.make.replace("\t", " ").replace("\n", " ")).append('\t')
+                  .append(s.focalMin).append('\t')
+                  .append(s.focalMax).append('\n');
             }
             byte[] buf = sb.toString().getBytes("UTF-8");
-            FileOutputStream out = new FileOutputStream(file);
-            out.write(buf);
-            out.close();
+            // through a temporary file, so a crash mid-write leaves the old log, not an empty one
+            java.io.File tmp = new java.io.File(file.getPath() + ".tmp");
+            FileOutputStream out = new FileOutputStream(tmp);
+            try {
+                out.write(buf);
+            } finally {
+                out.close();
+            }
+            if (!tmp.renameTo(file)) {
+                file.delete();
+                tmp.renameTo(file);
+            }
         } catch (Throwable t) {
             AppLog.e("LensLog.save", t);
         }

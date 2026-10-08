@@ -299,6 +299,39 @@ final class Sony {
                 .invoke(mod, key, level);
     }
 
+    /**
+     * The camera's clock: its local date and time (Sony's TimeUtil: the clock
+     * the camera's menu sets and the photographs carry), as millis since 1970
+     * UTC. Android's own clock on the camera starts at 1970 at every power-on
+     * and says nothing. Long.MIN_VALUE off the camera, or when the framework
+     * will not say. The fields are taken as the camera's menu shows them
+     * (month 1-12).
+     */
+    static long cameraLocalMillis() {
+        try {
+            Class<?> tu = Class.forName("com.sony.scalar.sysutil.TimeUtil");
+            Object cal = tu.getMethod("getCurrentCalendar").invoke(null);
+            if (cal == null) return Long.MIN_VALUE;
+            Class<?> pc = cal.getClass();
+            int y = pc.getField("year").getInt(cal), mo = pc.getField("month").getInt(cal),
+                    d = pc.getField("day").getInt(cal), h = pc.getField("hour").getInt(cal),
+                    mi = pc.getField("minute").getInt(cal), s = pc.getField("second").getInt(cal);
+            if (y < 2000 || mo < 1 || mo > 12 || d < 1 || d > 31) {
+                AppLog.i("camera clock: TimeUtil gave " + y + "-" + mo + "-" + d + " " + h + ":" + mi + ":" + s + ", not used");
+                return Long.MIN_VALUE;
+            }
+            java.util.Calendar c = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"));
+            c.clear();
+            c.set(y, mo - 1, d, h, mi, s);
+            return c.getTimeInMillis();
+        } catch (ClassNotFoundException e) {
+            return Long.MIN_VALUE; // the simulator
+        } catch (Throwable t) {
+            AppLog.i("camera clock: " + t);
+            return Long.MIN_VALUE;
+        }
+    }
+
     /** SteadyShot as the camera holds it now, one line (for the store dumps); "" off the camera. */
     String steadyShot() {
         if (!isCamera()) return "";

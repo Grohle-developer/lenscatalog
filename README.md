@@ -31,24 +31,41 @@ store. ~130 KB APK, v1-signed.
   `setLensCorrection` / `setLensCorrectionLevel` when you apply the lens.
   Stored per lens on the camera; ranges are queried live from the framework.
 - **Write EXIF to photos**: after shooting, tags the new photos on the card
-  with the lens that was applied when each was taken (`LensModel`, plus
-  `FocalLength` for primes and `FNumber`):
-  - **JPEG**: in the Exif IFD, leaving the camera's own EXIF, thumbnail and
-    file time untouched.
-  - **RAW (ARW)**: in the file's Exif IFD, in place — a new Exif IFD is
-    appended and only IFD0's 4-byte pointer changes, so the sensor data,
-    Sony's MakerNote and SR2 block stay byte-identical (verified on a real
-    A7 II ARW: same decode before and after) — and in an **XMP sidecar**
-    next to it (`DSC01837.XMP`), which Lightroom, Bridge and Capture One read
-    on import. A sidecar LensCatalog did not write is never overwritten.
+  with the lens that was applied when each was taken (`LensMake`, `LensModel`,
+  `LensSpecification`, `FNumber`, `MaxApertureValue`, plus `FocalLength` for
+  primes), matched by the camera's own photo numbering:
+  - **JPEG**: in the Exif IFD and in an embedded **XMP** packet (APP1),
+    leaving the camera's own EXIF, thumbnail and file time untouched. The
+    file is rewritten next to the original (`DSC02073.TMP`, an 8.3 name: the
+    card accepts no other) and the original is never touched until the new
+    one is in place.
+  - **RAW (ARW)**: in the file's Exif IFD and in an embedded XMP (tag 0x02BC
+    in IFD0), in place — the new Exif IFD, the XMP and a copy of IFD0 are
+    appended and only the 4-byte IFD0 offset in the header changes, so the
+    sensor data, Sony's MakerNote and SR2 block stay byte-identical (verified
+    on a real A7 II ARW: same decode before and after) — and in an **XMP
+    sidecar** next to it (`DSC01837.XMP`), which Lightroom, Bridge and
+    Capture One read on import. An XMP that LensCatalog did not write, in
+    the file or as a sidecar, is never overwritten.
+  - The XMP says the lens in every vocabulary a reader is known to use:
+    `exifEX:LensModel`/`LensMake`, Adobe's `aux:Lens`/`aux:LensInfo`, and
+    `MicrosoftPhoto:LensModel`/`LensManufacturer` — the only source of
+    Windows Explorer's "Lens model" and "Lens maker" fields, which read
+    neither EXIF nor sidecars. Lightroom and macOS read EXIF `LensModel`
+    (a photo already imported into Lightroom needs *Metadata › Read Metadata
+    from File*); Capture One names Sony lenses from its own database, keyed on
+    the MakerNote, and shows an adapted lens as the EXIF focal length and
+    aperture. Sony's Imaging Edge may refuse an ARW another program wrote to.
 - Fully navigable **without touch** (D-pad / center / MENU, control wheel and
   dials; ◀ ▶ pages through long lists, a held key repeats), in the visual
   language of Sony's native menus: black and Sony orange, a header that says
   where you are, drawn marks (the camera's font has no symbols), a legend of
   the keys on every screen, and colours exactly on the camera's 4-bit levels.
   Text is the bundled Roboto.
-- Bring your own catalog: drop a `lenses.json` in `/DCIM/LENSES/` on the memory
-  card and the app prefers it over the built-in one.
+- Bring your own catalog: drop a `LENSES.JSN` (the card holds 8.3 names only;
+  a `lenses.json` copied from a computer shows there as `LENSES~1.JSO`, which
+  is accepted too) in `/DCIM/LENSES/` on the memory card and the app prefers
+  it over the built-in one.
 
 ## Requirements
 
@@ -91,7 +108,10 @@ key is lost, users must uninstall first. A backup lives at
 `app/tools/api-check.py` verifies every platform call exists on API 10.
 `app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs and ARWs
 (javac + python3/PIL + exiftool; `ARW_SAMPLE=<file.ARW>` adds a real raw file,
-checked to decode identically with rawpy). `app/tools/icon.py` draws the launcher icon.
+checked to decode identically with rawpy), including the embedded XMP and,
+through an `LD_PRELOAD` shim (`app/test/rename_shim.c`), a card that refuses
+to rename: the photograph must come out tagged or byte-identical, never lost.
+`app/tools/icon.py` draws the launcher icon.
 
 `./tour.sh` runs the whole workflow on the A7 II simulator of
 [aintfilm-sony](https://github.com/Grohle-developer/aintfilm-sony)

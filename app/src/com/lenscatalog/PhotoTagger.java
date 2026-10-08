@@ -57,7 +57,8 @@ final class PhotoTagger {
         if (cur != null) {
             long next = CardSeq.next(ext);
             log.endCurrentSession(t0, next);
-            log.startSession(cur.id, cur.displayName, cur.focal, cur.aperture, cur.electronic, next);
+            log.startSession(cur.id, cur.displayName, cur.focal, cur.aperture, cur.electronic, next,
+                    cur.make, cur.focalMin, cur.focalMax);
             AppLog.i("tagger: session breakpoint at " + t0 + ", photo " + next);
         }
 
@@ -78,7 +79,8 @@ final class PhotoTagger {
             if (mtime <= lastRun) continue;
             String name = f.getName().toLowerCase();
             if (!isPhoto(name)) continue;
-            String key = "tagged_" + f.getName();
+            // keyed by folder and name: the numbers come round (DSC09999 -> 101MSDCF/DSC00001)
+            String key = "tagged_" + f.getParentFile().getName() + "/" + f.getName();
             if (p.getBoolean(key, false)) {
                 r.alreadyTagged++;
                 if (mtime > newest) newest = mtime;
@@ -105,15 +107,16 @@ final class PhotoTagger {
                 continue;
             }
             String err;
+            ExifWriter.Lens tags = lensOf(s);
             if (isRaw(name)) {
-                err = ExifWriter.writeLensExifRaw(f.getAbsolutePath(), s.displayName, s.focal, s.aperture);
-                String side = XmpSidecar.write(f, s.displayName, s.focal, s.aperture);
+                err = ExifWriter.writeLensExifRaw(f.getAbsolutePath(), tags);
+                String side = XmpSidecar.write(f, tags);
                 AppLog.i("tagger: raw " + f.getName() + " exif=" + (err == null ? "ok" : err)
                         + " sidecar=" + (side == null ? XmpSidecar.fileFor(f).getName() : side));
                 // the lens is on record if either one took it
                 if (side == null) err = null;
             } else {
-                err = ExifWriter.writeLensExif(f.getAbsolutePath(), s.displayName, s.focal, s.aperture);
+                err = ExifWriter.writeLensExif(f.getAbsolutePath(), tags);
             }
             if (err == null) {
                 r.tagged++;
@@ -132,6 +135,13 @@ final class PhotoTagger {
                 + " failed=" + r.failed + " skippedEl=" + r.skippedElectronic + " noSession=" + r.noSession
                 + " ms=" + r.millis);
         return r;
+    }
+
+    /** What the tags say about a session's lens. */
+    static ExifWriter.Lens lensOf(LensLog.Session s) {
+        int min = s.focalMin, max = s.focalMax;
+        if (min <= 0 || max <= 0) { min = s.focal; max = s.focal; }
+        return new ExifWriter.Lens(s.make, s.displayName, s.focal, s.aperture, min, max);
     }
 
     /** A file the tagger writes: a JPEG or a raw file. */
