@@ -53,6 +53,17 @@ start() {
   "$SIM" key down >/dev/null; "$SIM" key up >/dev/null; sleep 1.5
 }
 focused() { adb_ shell dumpsys window windows | tr -d '\r' | grep -E "mCurrentFocus" | grep -q "$1"; }
+# Where the catalogue's brands sit on the home screen follows assets/lenses.json (its order, and
+# how many brands there are: 48, then 62), so the walks below are worked out from it, not counted.
+# The rows above the brands: Write EXIF, Favourites and, once a lens has been applied, Last used;
+# below them: Add a lens, Manual data, Diagnostics, View log, Auto-exit.
+brand_k() { python3 - "$ROOT/app/assets/lenses.json" "$1" <<'PY'
+import json, sys
+print([b["brand"] for b in json.load(open(sys.argv[1], encoding="utf-8"))["brands"]].index(sys.argv[2]))
+PY
+}
+brand_n() { python3 -c 'import json,sys; print(len(json.load(open(sys.argv[1], encoding="utf-8"))["brands"]))' "$ROOT/app/assets/lenses.json"; }
+rep_key() { local w="$1" n="$2" out=""; for _ in $(seq 1 "$n"); do out="$out $w"; done; echo $out; }
 # the shutter: a camera-like JPEG written now, so it carries the time it was "taken"
 # The shutter, as on the A7 II: there Android's clock starts at 1970 on every
 # power-on (the camera's own log), while the photographs carry the camera's real
@@ -105,7 +116,7 @@ check "auto-exit off, stored" has_pref '<boolean name="auto_exit" value="false" 
 key down                                   # wraps to Write EXIF
 
 say "2. Catalogue -> Helios -> 44 58mm 1:2"
-key down down down down down down down down down
+key $(rep_key down $((2 + $(brand_k Helios))))     # Favourites, then the brands down to Helios
 shot 03-catalogo
 key enter down
 shot 04-modelos
@@ -126,7 +137,7 @@ sleep 3; shoot DSC00001.JPG; shoot DSC00001.ARW; sleep 1; shoot DSC00002.JPG
 say "3. Last used on home; Canon EF 100-200mm f/4.5A (a zoom)"
 key menu
 shot 09-inicio-ultimo
-key down down down down down enter enter
+key $(rep_key down $((3 + $(brand_k Canon)))) enter enter     # Favourites, Last used, then the brands down to Canon
 shot 10-ficha-zoom
 clock1970; key enter
 shot 11-aplicado-zoom
@@ -229,7 +240,8 @@ shot 18-registro
 
 # ------------------------------------------------------------------ two models of one name
 say "7. Voigtlander Color Skopar 20mm: K, EF and F share one name; the EF one must open"
-key menu up up up up up up up up enter down down down       # from View log, up through the tools to the last brands
+# from View log: up through Diagnostics, Manual data and Add a lens to the last brand, then on to Voigtländer
+key menu $(rep_key up $(( $(brand_n) - $(brand_k Voigtländer) + 3 ))) enter down down down
 shot 19-modelos-mismo-nombre
 key enter
 shot 20-ficha-montura-ef
@@ -279,12 +291,12 @@ adb_ shell rm $CARD/DCIM/LENSES/LENSES.JSN
 # ------------------------------------------------------------------ the wheel, a page, auto-exit
 say "10. Control wheel and page jump in a long list; manual focal by holding the key"
 start
-key down down down down down enter         # Canon (104 models)
+key $(rep_key down $((3 + $(brand_k Canon)))) enter         # Canon: Favourites, Last used, then the brands
 key wheel+ wheel+ wheel+
 shot 25-rueda
 key right
 shot 26-pagina
-key menu up up up up up up up up up enter  # back on Canon; up to manual data
+key menu $(rep_key up $(($(brand_k Canon) + 7))) enter  # back on Canon; up to Manual data
 key hold:right
 shot 27-manual-mantener
 key down down enter enter
