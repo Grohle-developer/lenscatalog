@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Chinon">
+  <title>Chinon</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <polygon points="62.0,32.0 47.0,58.0 17.0,58.0 2.0,32.0 17.0,6.0 47.0,6.0" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M28.96 36.9H32.43Q32.16 39.81 30.22 41.75Q28.28 43.69 24.6 43.69Q20.9 43.69 18.72 41.12Q16.53 38.55 16.53 34.22V32.6Q16.53 28.29 18.76 25.71Q20.98 23.14 24.76 23.14Q28.35 23.14 30.24 25.08Q32.14 27.02 32.44 30.02H28.98Q28.76 28.11 27.83 27.02Q26.9 25.94 24.76 25.94Q22.4 25.94 21.22 27.66Q20.05 29.39 20.04 32.51V34.22Q20.04 37.22 21.1 39.05Q22.16 40.88 24.6 40.88Q26.84 40.88 27.78 39.85Q28.72 38.82 28.96 36.9ZM41.51 30.99Q39.49 30.99 38.5 32.79V43.41H35.17V22.31H38.5V30.18Q40.12 28.27 42.63 28.27Q44.82 28.27 46.13 29.52Q47.45 30.77 47.47 33.77V43.41H44.13V33.81Q44.13 32.26 43.46 31.63Q42.78 30.99 41.51 30.99Z" fill="#ffffff"/>
+</svg>

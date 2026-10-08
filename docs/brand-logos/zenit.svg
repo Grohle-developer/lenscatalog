@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Zenit">
+  <title>Zenit</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#226644"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#558877" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#558877" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114433"/>
+  </g>
+  <path d="M17.04 25.65V22.86H31.52V25.06L21.16 40.09H31.85V42.86H16.96V40.61L27.32 25.65ZM46.79 40.34Q46.08 41.38 44.69 42.26Q43.29 43.14 41.07 43.14Q37.76 43.14 35.86 41.08Q33.96 39.02 33.96 35.95V35.39Q33.96 31.87 35.91 29.8Q37.85 27.73 40.68 27.73Q43.92 27.73 45.48 29.79Q47.04 31.85 47.04 35.06V36.48H37.33Q37.47 38.19 38.49 39.33Q39.51 40.46 41.27 40.46Q43.57 40.46 44.99 38.62ZM40.68 30.4Q39.31 30.4 38.47 31.37Q37.63 32.33 37.38 34.03H43.73V33.78Q43.66 32.48 43 31.44Q42.34 30.4 40.68 30.4Z" fill="#ffffff"/>
+</svg>

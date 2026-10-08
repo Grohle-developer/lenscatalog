@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Miranda">
+  <title>Miranda</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <path d="M-44 72L-4 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-32 72L8 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-20 72L20 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-8 72L32 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M4 72L44 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M16 72L56 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M28 72L68 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M40 72L80 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M52 72L92 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M64 72L104 -8" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M76 72L116 -8" fill="none" stroke="#5566aa" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M26.21 38.33 31.97 23H36.47V43H33.01V36.41L33.34 27.62L27.45 43H24.96L19.07 27.6L19.41 36.41V43H15.95V23H20.44ZM46.68 31.08Q44.36 31.08 43.57 32.84V43H40.25V28.14H43.44L43.52 29.81Q44.7 27.86 46.87 27.86Q47.54 27.86 48.05 28.04L48.02 31.19Q47.34 31.08 46.68 31.08Z" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Irix">
+  <title>Irix</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#885500"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#aa7733" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#aa7733" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#553300"/>
+  </g>
+  <path d="M25.74 23V43H22.28V23ZM32.25 28.14 35.03 33.03 37.86 28.14H41.55L37.02 35.45L41.72 43H38.02L35.06 37.92L32.1 43H28.39L33.09 35.45L28.56 28.14Z" fill="#ffffff"/>
+</svg>

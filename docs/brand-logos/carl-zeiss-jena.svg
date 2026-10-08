@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Carl Zeiss Jena">
+  <title>Carl Zeiss Jena</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <path d="M-4 44L32 22L68 44" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 56L32 34L68 56" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 68L32 46L68 68" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 80L32 58L68 80" fill="none" stroke="#5566aa" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M29.1 36.49H32.56Q32.3 39.4 30.36 41.34Q28.41 43.27 24.73 43.27Q21.04 43.27 18.85 40.71Q16.67 38.14 16.67 33.81V32.19Q16.67 27.88 18.9 25.3Q21.12 22.73 24.9 22.73Q28.48 22.73 30.38 24.67Q32.27 26.61 32.58 29.61H29.12Q28.9 27.7 27.97 26.61Q27.04 25.53 24.9 25.53Q22.54 25.53 21.36 27.25Q20.19 28.98 20.17 32.09V33.81Q20.17 36.8 21.24 38.64Q22.3 40.47 24.73 40.47Q26.97 40.47 27.91 39.44Q28.85 38.41 29.1 36.49ZM43.87 23H47.33V37.01Q47.33 40.01 45.47 41.64Q43.61 43.27 40.79 43.27Q37.95 43.27 36.1 41.81Q34.25 40.35 34.25 37.29H37.73Q37.73 39.02 38.58 39.76Q39.43 40.5 40.79 40.5Q42.14 40.5 43 39.6Q43.87 38.7 43.87 37.01Z" fill="#ffffff"/>
+</svg>

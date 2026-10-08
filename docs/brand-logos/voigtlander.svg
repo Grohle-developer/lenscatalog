@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Voigtländer">
+  <title>Voigtländer</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#772233"/>
+    <path d="M32 -4V68M-4 32H68" fill="none" stroke="#995555" stroke-width="3"/><circle cx="32" cy="32" r="20" fill="none" stroke="#995555" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#551122"/>
+  </g>
+  <path d="M33.29 22.86 26.09 42.86H22.73L15.56 22.86H19.36L24.4 38.49L29.47 22.86ZM34.62 35.29Q34.62 32.07 36.45 29.9Q38.28 27.73 41.52 27.73Q44.75 27.73 46.57 29.84Q48.39 31.96 48.44 35.12V35.58Q48.44 38.82 46.62 40.98Q44.8 43.14 41.55 43.14Q38.28 43.14 36.45 40.98Q34.62 38.82 34.62 35.58ZM37.95 35.58Q37.95 37.59 38.81 39.02Q39.66 40.46 41.55 40.46Q43.39 40.46 44.25 39.02Q45.1 37.59 45.1 35.58V35.29Q45.1 33.33 44.25 31.87Q43.39 30.4 41.52 30.4Q39.66 30.4 38.81 31.87Q37.95 33.33 37.95 35.29Z" fill="#ffffff"/>
+</svg>

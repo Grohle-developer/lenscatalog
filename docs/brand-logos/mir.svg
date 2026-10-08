@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Mir">
+  <title>Mir</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#772233"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#995555" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#995555" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#551122"/>
+  </g>
+  <path d="M28.22 38.58 33.97 23.25H38.48V43.25H35.02V36.66L35.34 27.87L29.45 43.25H26.97L21.07 27.86L21.42 36.66V43.25H17.95V23.25H22.45ZM42.25 24.52Q42.25 23.75 42.76 23.25Q43.26 22.75 44.15 22.75Q45.04 22.75 45.54 23.25Q46.05 23.75 46.05 24.52Q46.05 25.29 45.54 25.79Q45.04 26.29 44.15 26.29Q43.26 26.29 42.76 25.79Q42.25 25.29 42.25 24.52ZM45.8 28.39V43.25H42.46V28.39Z" fill="#ffffff"/>
+</svg>

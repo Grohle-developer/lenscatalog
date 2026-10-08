@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Lensbaby">
+  <title>Lensbaby</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#333333"/>
+    <polygon points="0,64 64,0 64,64" fill="#666666"/>
+    <circle cx="32" cy="32" r="22" fill="#222222"/>
+  </g>
+  <path d="M30.59 40.64V43.41H18.03V23.41H21.49V40.64ZM45.97 36.13Q45.97 39.41 44.49 41.55Q43.02 43.69 40.19 43.69Q37.59 43.69 36.11 41.79L35.96 43.41H32.93V22.31H36.26V29.98Q37.71 28.27 40.16 28.27Q43.03 28.27 44.5 30.38Q45.97 32.49 45.97 35.84ZM39.31 30.99Q37.18 30.99 36.26 32.92V39.02Q37.19 40.95 39.34 40.95Q41.19 40.95 41.92 39.57Q42.65 38.18 42.65 35.84Q42.65 33.88 41.93 32.44Q41.22 30.99 39.31 30.99Z" fill="#ffffff"/>
+</svg>

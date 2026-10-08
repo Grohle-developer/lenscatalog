@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Leica">
+  <title>Leica</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#666600"/>
+    <polygon points="0,64 0,24 40,64" fill="#888833"/><polygon points="64,0 64,34 30,0" fill="#888833"/>
+    <circle cx="32" cy="32" r="22" fill="#444400"/>
+  </g>
+  <path d="M30.85 40.09V42.86H18.29V22.86H21.75V40.09ZM45.46 40.34Q44.75 41.38 43.35 42.26Q41.96 43.14 39.73 43.14Q36.42 43.14 34.53 41.08Q32.63 39.02 32.63 35.95V35.39Q32.63 31.87 34.58 29.8Q36.52 27.73 39.35 27.73Q42.59 27.73 44.15 29.79Q45.71 31.85 45.71 35.06V36.48H36Q36.13 38.19 37.16 39.33Q38.18 40.46 39.94 40.46Q42.23 40.46 43.66 38.62ZM39.35 30.4Q37.98 30.4 37.14 31.37Q36.3 32.33 36.05 34.03H42.4V33.78Q42.33 32.48 41.67 31.44Q41.01 30.4 39.35 30.4Z" fill="#ffffff"/>
+</svg>

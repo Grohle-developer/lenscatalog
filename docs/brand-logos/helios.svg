@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Helios">
+  <title>Helios</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#aa3300"/>
+    <path d="M-4 16Q8 6 20 16T44 16T68 16" fill="none" stroke="#bb6633" stroke-width="3"/><path d="M-4 30Q8 20 20 30T44 30T68 30" fill="none" stroke="#bb6633" stroke-width="3"/><path d="M-4 44Q8 34 20 44T44 44T68 44" fill="none" stroke="#bb6633" stroke-width="3"/><path d="M-4 58Q8 48 20 58T44 58T68 58" fill="none" stroke="#bb6633" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#662200"/>
+  </g>
+  <path d="M28.31 42.86V33.96H19.37V42.86H15.91V22.86H19.37V31.19H28.31V22.86H31.79V42.86ZM47.84 40.34Q47.13 41.38 45.74 42.26Q44.34 43.14 42.12 43.14Q38.81 43.14 36.91 41.08Q35.02 39.02 35.02 35.95V35.39Q35.02 31.87 36.96 29.8Q38.9 27.73 41.73 27.73Q44.97 27.73 46.53 29.79Q48.09 31.85 48.09 35.06V36.48H38.38Q38.52 38.19 39.54 39.33Q40.56 40.46 42.32 40.46Q44.62 40.46 46.05 38.62ZM41.73 30.4Q40.36 30.4 39.52 31.37Q38.68 32.33 38.44 34.03H44.78V33.78Q44.71 32.48 44.05 31.44Q43.39 30.4 41.73 30.4Z" fill="#ffffff"/>
+</svg>

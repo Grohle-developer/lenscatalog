@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Rollei">
+  <title>Rollei</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#666600"/>
+    <path d="M-4 44L32 22L68 44" fill="none" stroke="#888833" stroke-width="3"/><path d="M-4 56L32 34L68 56" fill="none" stroke="#888833" stroke-width="3"/><path d="M-4 68L32 46L68 68" fill="none" stroke="#888833" stroke-width="3"/><path d="M-4 80L32 58L68 80" fill="none" stroke="#888833" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#444400"/>
+  </g>
+  <path d="M28.14 42.86 24.13 35.16H20.24V42.86H16.78V22.86H23.81Q27.26 22.86 29.14 24.4Q31.02 25.94 31.02 28.89Q31.02 30.9 30.05 32.26Q29.07 33.62 27.36 34.33L31.85 42.68V42.86ZM20.24 25.65V32.37H23.81Q25.68 32.37 26.62 31.43Q27.56 30.49 27.56 29.06Q27.56 27.52 26.68 26.59Q25.8 25.66 23.87 25.65ZM33.4 35.29Q33.4 32.07 35.23 29.9Q37.05 27.73 40.3 27.73Q43.52 27.73 45.34 29.84Q47.16 31.96 47.22 35.12V35.58Q47.22 38.82 45.4 40.98Q43.58 43.14 40.32 43.14Q37.05 43.14 35.23 40.98Q33.4 38.82 33.4 35.58ZM36.73 35.58Q36.73 37.59 37.58 39.02Q38.44 40.46 40.32 40.46Q42.16 40.46 43.02 39.02Q43.88 37.59 43.88 35.58V35.29Q43.88 33.33 43.02 31.87Q42.16 30.4 40.3 30.4Q38.44 30.4 37.58 31.87Q36.73 33.33 36.73 35.29Z" fill="#ffffff"/>
+</svg>

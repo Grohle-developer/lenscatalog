@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="TTArtisan">
+  <title>TTArtisan</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#225577"/>
+    <polygon points="0,64 0,24 40,64" fill="#557799"/><polygon points="64,0 64,34 30,0" fill="#557799"/>
+    <circle cx="32" cy="32" r="22" fill="#113355"/>
+  </g>
+  <path d="M15.52 25.79V23H31.39V25.79H25.17V43H21.7V25.79ZM32.61 25.79V23H48.48V25.79H42.25V43H38.79V25.79Z" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Konica Minolta">
+  <title>Konica Minolta</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <path d="M-4 44L32 22L68 44" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 56L32 34L68 56" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 68L32 46L68 68" fill="none" stroke="#448888" stroke-width="3"/><path d="M-4 80L32 58L68 80" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M24.62 43 18.61 34.35 16.33 36.76V43H12.87V23H16.33V32.4L18.27 30.01L24.12 23H28.33L20.89 31.85L28.74 43ZM40.87 38.33 46.62 23H51.13V43H47.67V36.41L48 27.62L42.1 43H39.62L33.72 27.6L34.07 36.41V43H30.61V23H35.1Z" fill="#ffffff"/>
+</svg>

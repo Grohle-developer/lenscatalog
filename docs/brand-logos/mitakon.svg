@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Mitakon">
+  <title>Mitakon</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <circle cx="50" cy="14" r="26" fill="#448888"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M23.56 38.88 29.31 23.55H33.82V43.55H30.36V36.96L30.69 28.16L24.8 43.55H22.31L16.42 28.15L16.76 36.96V43.55H13.3V23.55H17.79ZM46.84 43.55 42.43 37.15 40.94 38.69V43.55H37.6V22.45H40.94V34.62L41.99 33.3L46.1 28.69H50.11L44.58 34.87L50.7 43.55Z" fill="#ffffff"/>
+</svg>

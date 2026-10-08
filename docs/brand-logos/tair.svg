@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Tair">
+  <title>Tair</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#448888" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M16.76 25.65V22.86H32.62V25.65H26.4V42.86H22.94V25.65ZM43.83 42.86Q43.59 42.35 43.45 41.46Q41.87 43.14 39.53 43.14Q37.31 43.14 35.89 41.86Q34.48 40.58 34.48 38.69Q34.48 36.31 36.25 35.05Q38.02 33.78 41.24 33.78H43.34V32.81Q43.34 31.64 42.69 30.95Q42.03 30.25 40.73 30.25Q39.53 30.25 38.83 30.84Q38.12 31.43 38.12 32.29H34.8Q34.8 30.53 36.45 29.13Q38.11 27.73 40.92 27.73Q43.42 27.73 45.05 29Q46.68 30.28 46.68 32.84V39.43Q46.68 41.43 47.24 42.63V42.86ZM43.34 38.67V35.87H41.31Q37.8 35.95 37.8 38.36Q37.8 39.25 38.41 39.85Q39.01 40.46 40.17 40.46Q41.32 40.46 42.16 39.9Q43 39.35 43.34 38.67Z" fill="#ffffff"/>
+</svg>

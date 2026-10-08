@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Laowa">
+  <title>Laowa</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#226644"/>
+    <polygon points="62.0,32.0 47.0,58.0 17.0,58.0 2.0,32.0 17.0,6.0 47.0,6.0" fill="none" stroke="#558877" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114433"/>
+  </g>
+  <path d="M30.96 40.09V42.86H18.4V22.86H21.86V40.09ZM42.19 42.86Q41.95 42.35 41.81 41.46Q40.23 43.14 37.89 43.14Q35.67 43.14 34.25 41.86Q32.84 40.58 32.84 38.69Q32.84 36.31 34.61 35.05Q36.38 33.78 39.6 33.78H41.7V32.81Q41.7 31.64 41.05 30.95Q40.39 30.25 39.09 30.25Q37.89 30.25 37.19 30.84Q36.48 31.43 36.48 32.29H33.15Q33.15 30.53 34.81 29.13Q36.46 27.73 39.28 27.73Q41.78 27.73 43.41 29Q45.04 30.28 45.04 32.84V39.43Q45.04 41.43 45.6 42.63V42.86ZM41.7 38.67V35.87H39.66Q36.16 35.95 36.16 38.36Q36.16 39.25 36.77 39.85Q37.37 40.46 38.52 40.46Q39.68 40.46 40.52 39.9Q41.35 39.35 41.7 38.67Z" fill="#ffffff"/>
+</svg>

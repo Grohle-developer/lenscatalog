@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Toshiba">
+  <title>Toshiba</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#553388"/>
+    <polygon points="62.0,32.0 47.0,58.0 17.0,58.0 2.0,32.0 17.0,6.0 47.0,6.0" fill="none" stroke="#775599" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#332255"/>
+  </g>
+  <path d="M17.1 25.65V22.86H32.97V25.65H26.75V42.86H23.28V25.65ZM43.63 38.82Q43.63 38.11 43.04 37.58Q42.46 37.05 40.51 36.64Q38.09 36.13 36.6 35.12Q35.11 34.11 35.11 32.23Q35.11 30.4 36.65 29.06Q38.19 27.73 40.84 27.73Q43.63 27.73 45.21 29.09Q46.8 30.45 46.8 32.45H43.46Q43.46 31.59 42.8 30.91Q42.14 30.23 40.84 30.23Q39.58 30.23 38.97 30.79Q38.37 31.35 38.37 32.09Q38.37 32.81 38.97 33.25Q39.58 33.69 41.42 34.09Q44 34.65 45.45 35.64Q46.9 36.64 46.9 38.63Q46.9 40.61 45.26 41.87Q43.63 43.14 40.89 43.14Q37.83 43.14 36.22 41.57Q34.62 40.01 34.62 38.16H37.86Q37.91 39.54 38.87 40.09Q39.82 40.64 40.92 40.64Q42.24 40.64 42.93 40.13Q43.63 39.62 43.63 38.82Z" fill="#ffffff"/>
+</svg>

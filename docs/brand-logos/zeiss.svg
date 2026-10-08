@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Zeiss">
+  <title>Zeiss</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#116666"/>
+    <circle cx="46" cy="18" r="8" fill="none" stroke="#448888" stroke-width="3"/><circle cx="46" cy="18" r="15" fill="none" stroke="#448888" stroke-width="3"/><circle cx="46" cy="18" r="22" fill="none" stroke="#448888" stroke-width="3"/><circle cx="46" cy="18" r="29" fill="none" stroke="#448888" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#114444"/>
+  </g>
+  <path d="M17.49 25.65V22.86H31.97V25.06L21.62 40.09H32.3V42.86H17.41V40.61L27.77 25.65ZM43.32 38.82Q43.32 38.11 42.73 37.58Q42.15 37.05 40.2 36.64Q37.78 36.13 36.29 35.12Q34.8 34.11 34.8 32.23Q34.8 30.4 36.34 29.06Q37.88 27.73 40.53 27.73Q43.32 27.73 44.91 29.09Q46.49 30.45 46.49 32.45H43.15Q43.15 31.59 42.49 30.91Q41.84 30.23 40.53 30.23Q39.27 30.23 38.66 30.79Q38.06 31.35 38.06 32.09Q38.06 32.81 38.66 33.25Q39.27 33.69 41.11 34.09Q43.69 34.65 45.14 35.64Q46.59 36.64 46.59 38.63Q46.59 40.61 44.95 41.87Q43.32 43.14 40.59 43.14Q37.52 43.14 35.91 41.57Q34.31 40.01 34.31 38.16H37.55Q37.6 39.54 38.56 40.09Q39.51 40.64 40.61 40.64Q41.93 40.64 42.62 40.13Q43.32 39.62 43.32 38.82Z" fill="#ffffff"/>
+</svg>

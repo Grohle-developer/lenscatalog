@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Yashica">
+  <title>Yashica</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <circle cx="0" cy="0" r="22" fill="#5566aa"/><circle cx="64" cy="64" r="22" fill="#5566aa"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M20.34 22.86 24.93 32.33 29.53 22.86H33.37L26.67 35.5V42.86H23.18V35.5L16.48 22.86ZM44.12 42.86Q43.87 42.35 43.73 41.46Q42.15 43.14 39.82 43.14Q37.59 43.14 36.18 41.86Q34.76 40.58 34.76 38.69Q34.76 36.31 36.53 35.05Q38.3 33.78 41.52 33.78H43.62V32.81Q43.62 31.64 42.97 30.95Q42.32 30.25 41.01 30.25Q39.82 30.25 39.11 30.84Q38.4 31.43 38.4 32.29H35.08Q35.08 30.53 36.73 29.13Q38.39 27.73 41.2 27.73Q43.7 27.73 45.33 29Q46.96 30.28 46.96 32.84V39.43Q46.96 41.43 47.52 42.63V42.86ZM43.62 38.67V35.87H41.59Q38.09 35.95 38.09 38.36Q38.09 39.25 38.69 39.85Q39.29 40.46 40.45 40.46Q41.6 40.46 42.44 39.9Q43.28 39.35 43.62 38.67Z" fill="#ffffff"/>
+</svg>

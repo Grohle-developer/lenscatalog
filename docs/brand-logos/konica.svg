@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Konica">
+  <title>Konica</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <circle cx="50" cy="14" r="26" fill="#5566aa"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M28.44 42.86 22.44 34.21 20.16 36.63V42.86H16.7V22.86H20.16V32.26L22.1 29.87L27.95 22.86H32.15L24.72 31.71L32.56 42.86ZM33.48 35.29Q33.48 32.07 35.31 29.9Q37.14 27.73 40.38 27.73Q43.61 27.73 45.43 29.84Q47.25 31.96 47.3 35.12V35.58Q47.3 38.82 45.48 40.98Q43.66 43.14 40.41 43.14Q37.14 43.14 35.31 40.98Q33.48 38.82 33.48 35.58ZM36.81 35.58Q36.81 37.59 37.67 39.02Q38.52 40.46 40.41 40.46Q42.25 40.46 43.11 39.02Q43.96 37.59 43.96 35.58V35.29Q43.96 33.33 43.11 31.87Q42.25 30.4 40.38 30.4Q38.52 30.4 37.67 31.87Q36.81 33.33 36.81 35.29Z" fill="#ffffff"/>
+</svg>
