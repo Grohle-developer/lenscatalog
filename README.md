@@ -6,6 +6,10 @@ and sets the IBIS focal length — so vintage glass gets proper stabilization an
 correct metadata. Java plus one small native library for the camera's settings
 store. ~130 KB APK, v1-signed.
 
+**Tested on the Sony A7 II only.** It is built on the PMCA framework, not on anything
+specific to that body, so it should work on the other cameras that support PMCA apps
+(see the requirements below), but that has not been tried on any of them.
+
 ![home](shots/01-inicio.png) ![lens page](shots/10-ficha-zoom.png)
 
 ## What it does
