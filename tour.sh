@@ -416,9 +416,13 @@ check "and the app's copy is written again" adb_ shell "ls $APPFILE" | grep -q m
 MYIDX=$(python3 - "$ROOT/app/assets/lenses.json" "$MYBRAND" <<'PY'
 import json, sys
 brands = [b["brand"] for b in json.load(open(sys.argv[1]))["brands"]]
-i = len(brands)
-for k, b in enumerate(brands):
-    if b.lower() > sys.argv[2].lower(): i = k; break
+low = [b.lower() for b in brands]
+if sys.argv[2].lower() in low:            # a catalogue brand: its own row
+    i = low.index(sys.argv[2].lower())
+else:                                     # a new one: where Catalog.applyUser slots it, alphabetically
+    i = len(brands)
+    for k, b in enumerate(low):
+        if b > sys.argv[2].lower(): i = k; break
 print(i)
 PY
 )
