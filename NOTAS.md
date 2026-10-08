@@ -402,3 +402,54 @@ aintfilm-sony, confirmada): el temporal del JPG no podía crearse.
   largos en vez de rechazarlos, y los devuelve en minúsculas); el tour audita
   al final que todo lo que la app dejó en la tarjeta es 8.3, y el test de host
   cubre el nombre temporal.
+
+### Revisión adversaria, XMP incrustado y qué lee cada programa
+
+Antes de cerrar la 0.3.3 pasó por una revisión adversaria (workflow) y una
+investigación de qué campo lee cada programa. Resultado:
+
+- **Bloqueante confirmado y corregido**: si la tarjeta rechazaba
+  `renameTo(TMP → JPG)`, el *fallback* borraba el original antes de volver a
+  intentar el renombrado, y el `finally` borraba el temporal: con un segundo
+  fallo la foto desaparecía. Ahora el original no se toca hasta que el nuevo
+  está en su sitio: si el renombrado por encima falla, el original pasa a
+  `DSC02073.OLD`, el nuevo entra, y solo entonces se borra el `.OLD`. Si ni
+  eso puede, el `.OLD` vuelve a su nombre; y si tampoco, el error dice
+  «left as DSC02073.OLD» y la siguiente pasada lo recupera antes de
+  etiquetar. `app/test/rename_shim.c` (LD_PRELOAD sobre `rename`/`renameat`)
+  inyecta los tres fallos en `exif-test.sh`: etiquetado vía `.OLD`; fallo
+  total con foto byte-idéntica y sin restos; y recuperación en la pasada
+  siguiente.
+- **Quién lee qué** (documentación y foros de cada programa, 2026-10-08):
+  Lightroom muestra `LensModel` del EXIF del propio raw (no tiene campo para
+  el fabricante; una foto ya importada necesita *Metadatos › Leer metadatos
+  del archivo*; el `aux:Lens` del sidecar es su respaldo). Capture One nombra
+  los objetivos Sony por su propia base de datos a partir del `LensType` del
+  MakerNote, y para uno adaptado compone «58mm f/2» con `FocalLength` y
+  `MaxApertureValue` (por eso se escriben). **El Explorador de Windows** —
+  lo más probable, por el «fabricante y modelo» que Berto echa en falta —
+  lee «Modelo del objetivo» y «Fabricante del objetivo» *solo* del XMP
+  incrustado en el archivo, espacio de nombres `MicrosoftPhoto`
+  (`http://ns.microsoft.com/photo/1.0/`): ni del EXIF ni del sidecar. macOS
+  (ImageIO) lee `LensModel` del EXIF. Imaging Edge de Sony puede negarse a
+  abrir un ARW tocado por otro programa (sin verificar; el sensor y el
+  MakerNote están byte a byte).
+- **XMP incrustado**: `XmpSidecar.packet(lens)` es ahora un solo paquete
+  con `exifEX:*`, `aux:*`, `MicrosoftPhoto:*`, `exif:FocalLength` y
+  `exif:FNumber`, marcado `x:xmptk="LensCatalog"` para que una pasada
+  posterior sepa que puede sustituirlo. En el **JPG** va como APP1
+  (`http://ns.adobe.com/xap/1.0/\0`) detrás del Exif, sustituyendo el nuestro
+  de una pasada anterior y respetando uno ajeno (entonces no se añade). En el
+  **ARW** va como etiqueta 0x02BC (BYTE) en IFD0: como IFD0 crece una entrada,
+  se añade al final del archivo una copia del IFD0 (con su enlace al IFD
+  siguiente), el nuevo Exif IFD y el paquete, y lo único que cambia de los
+  bytes de la cámara son los 4 del desplazamiento del IFD0 en la cabecera
+  (bytes 4-7; se escriben los últimos, tras `sync`, para que un corte deje el
+  archivo como estaba). El test comprueba que el cambio en el ARW se limita a
+  esos bytes y que rawpy decodifica lo mismo.
+- Menores de la misma revisión: la clave `tagged_` de PhotoTagger lleva la
+  carpeta (`100MSDCF/DSC00001.JPG`), que antes chocaba entre carpetas;
+  `LensLog` guarda en temporal y renombra, y conserva 60 sesiones en vez de
+  20; la auditoría 8.3 del tour comprueba que la lista no está vacía.
+- Pendiente de Berto: qué programa usa (si es el Explorador, con la 0.3.3 ya
+  debería verse; si es Lightroom, «Leer metadatos del archivo»).

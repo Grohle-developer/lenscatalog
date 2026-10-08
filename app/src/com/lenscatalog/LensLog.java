@@ -21,7 +21,7 @@ import java.util.List;
  */
 final class LensLog {
     /** Maximum sessions kept (plus the current one). */
-    static final int MAX = 20;
+    static final int MAX = 60;
 
     static final class Session {
         String id;           // catalog id, "manual:<focal>", or "electronic"
@@ -253,9 +253,18 @@ final class LensLog {
                   .append(s.focalMax).append('\n');
             }
             byte[] buf = sb.toString().getBytes("UTF-8");
-            FileOutputStream out = new FileOutputStream(file);
-            out.write(buf);
-            out.close();
+            // through a temporary file, so a crash mid-write leaves the old log, not an empty one
+            java.io.File tmp = new java.io.File(file.getPath() + ".tmp");
+            FileOutputStream out = new FileOutputStream(tmp);
+            try {
+                out.write(buf);
+            } finally {
+                out.close();
+            }
+            if (!tmp.renameTo(file)) {
+                file.delete();
+                tmp.renameTo(file);
+            }
         } catch (Throwable t) {
             AppLog.e("LensLog.save", t);
         }

@@ -172,11 +172,12 @@ o, n = open(orig, "rb").read(), open(d + "/DSC00001.ARW", "rb").read()
 moved = [i for i in range(len(o)) if o[i] != n[i]]
 ok = (b.get("ExifIFD:LensModel") == "Helios 44 58mm 1:2" and b.get("ExifIFD:LensMake") == "Helios"
       and b.get("ExifIFD:FocalLength") == 58 and b.get("ExifIFD:FNumber") == 2 and b.get("ExifIFD:LensInfo") == "58 58 2 2"
-      and moved and moved[-1] - moved[0] < 4
+      and moved and moved[0] >= 4 and moved[-1] <= 7  # only the header's IFD0 offset
       and all(b.get(k) == a.get(k) for k in ("ExifIFD:ISO", "ExifIFD:ExposureTime", "ExifIFD:DateTimeOriginal"))
-      and x.get("XMP-exifEX:LensModel") == "Helios 44 58mm 1:2" and x.get("XMP-exif:FocalLength") == 58)
+      and x.get("XMP-exifEX:LensModel") == "Helios 44 58mm 1:2" and x.get("XMP-exif:FocalLength") == 58
+      and b.get("XMP-microsoft:LensModel") == "Helios 44 58mm 1:2" and b.get("XMP-microsoft:LensManufacturer") == "Helios")
 print("  %s   DSC00001.ARW: LensMake=%r LensModel=%r FocalLength=%s FNumber=%s LensInfo=%r, %d camera bytes changed "
-      "(the Exif pointer); DSC00001.XMP: %r" % ("ok" if ok else "FAIL", b.get("ExifIFD:LensMake"), b.get("ExifIFD:LensModel"),
+      "(the header's IFD0 offset); DSC00001.XMP: %r" % ("ok" if ok else "FAIL", b.get("ExifIFD:LensMake"), b.get("ExifIFD:LensModel"),
       b.get("ExifIFD:FocalLength"), b.get("ExifIFD:FNumber"), b.get("ExifIFD:LensInfo"), len(moved), x.get("XMP-exifEX:LensModel")))
 sys.exit(0 if ok else 1)
 PY
@@ -198,7 +199,8 @@ for name, (lens, focal, f) in sorted(want.items()):
     kept = all(t.get(k) == o.get(k) for k in ("ExifIFD:ISO", "ExifIFD:ExposureTime", "ExifIFD:DateTimeOriginal",
                                               "IFD0:Make", "IFD0:Model", "IFD1:ThumbnailLength"))
     make = lens.split(" ")[0] if not lens.startswith("Manual") else None
-    ok = got[0] == lens and got[1] == focal and abs((got[2] or 0) - f) < 1e-6 and kept and t.get("ExifIFD:LensMake") == make
+    ok = (got[0] == lens and got[1] == focal and abs((got[2] or 0) - f) < 1e-6 and kept and t.get("ExifIFD:LensMake") == make
+          and t.get("XMP-microsoft:LensModel") == lens)
     bad += not ok
     print("  %s   %s: LensMake=%r LensModel=%r FocalLength=%s FNumber=%s, camera EXIF kept=%s"
           % ("ok" if ok else "FAIL", name, t.get("ExifIFD:LensMake"), got[0], got[1], got[2], kept))
@@ -297,6 +299,8 @@ say "12. The names the app left on the card"
 card_names() { adb_ shell "ls -R $CARD/DCIM $CARD/AINTFILM" | tr -d '\r' | grep -vE '^(/|$)'; }
 card_names | sed 's/^/  card: /' | head -40
 not83() { card_names | grep -vE '^[A-Z0-9_~-]{1,8}(\.[A-Z0-9_~-]{1,3})?$'; }
+has_photos() { card_names | grep -q "DSC00001.JPG"; }
+check "the card listing has the photographs (the audit is not vacuous)" has_photos
 check "every name on the card is 8.3, upper case" test -z "$(not83)"
 not83 | sed 's/^/  NOT 8.3: /'
 

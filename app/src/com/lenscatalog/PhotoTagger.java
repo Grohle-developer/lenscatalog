@@ -79,7 +79,8 @@ final class PhotoTagger {
             if (mtime <= lastRun) continue;
             String name = f.getName().toLowerCase();
             if (!isPhoto(name)) continue;
-            String key = "tagged_" + f.getName();
+            // keyed by folder and name: the numbers come round (DSC09999 -> 101MSDCF/DSC00001)
+            String key = "tagged_" + f.getParentFile().getName() + "/" + f.getName();
             if (p.getBoolean(key, false)) {
                 r.alreadyTagged++;
                 if (mtime > newest) newest = mtime;
