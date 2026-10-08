@@ -353,6 +353,7 @@ for ch in sys.argv[1]:
     print(" ".join(seq))
 PY
 }
+on_device() { adb_ shell "ls $1" | tr -d '\r' | grep "$(basename "$1")" >/dev/null; }   # a file exists on the guest
 type_text() { # the keys of a text, a character at a time (several keys a call: the emulator takes them in order)
   # (read on its own descriptor: adb shell, inside `key`, would swallow the lines left on stdin)
   while read -r -u 3 line; do KEYWAIT=0.7 key $line; done 3< <(keys_for "$1")
@@ -387,7 +388,7 @@ m = [x for x in b[0]["models"] if x["id"].startswith("my-")][0]
 assert m["model"] == "Oreston 50mm f/1.8 (zebra)" and m["mount"] == "M42" and m["type"] == "prime"
 assert m["focal"] == 50 and abs(m["max_aperture"] - 1.8) < 1e-9 and m["id"] == "my-meyer-optik-oreston-50mm-f-1-8-zebra-m42"
 PY
-check "the app's own copy exists" adb_ shell "ls $APPFILE" | grep -q mylenses.json
+check "the app's own copy exists" on_device $APPFILE
 key menu                                       # the result closes onto the brand's list
 shot 33-marca-propia
 key enter                                      # the lens's page: with its MINE chip, Edit and Delete
@@ -406,12 +407,12 @@ fi
 adb_ shell rm $MYFILE
 start
 check "a new card: the lens is still there, from the app's copy" logged "my lenses: 1"
-check "and the card gets its copy back" adb_ shell "ls $MYFILE" | grep -q MYLENSES.JSN
+check "and the card gets its copy back" on_device $MYFILE
 # a reinstall, or a second body: the app's copy is gone; the card's brings the lens back
 adb_ shell pm clear $PKG >/dev/null
 start
 check "a reinstall: the lens comes back from the card" logged "my lenses: 1 (1 imported from the card)"
-check "and the app's copy is written again" adb_ shell "ls $APPFILE" | grep -q mylenses.json
+check "and the app's copy is written again" on_device $APPFILE
 # delete it: OK twice on its page
 MYIDX=$(python3 - "$ROOT/app/assets/lenses.json" "$MYBRAND" <<'PY'
 import json, sys
