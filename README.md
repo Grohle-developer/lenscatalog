@@ -1,4 +1,26 @@
-# LensCatalog
+<p align="center">
+  <img src="docs/media/logo.svg" width="112" alt="LensCatalog logo">
+</p>
+
+<h1 align="center">LensCatalog</h1>
+
+<p align="center">
+  <b>Manual and adapted lenses, properly stabilised and tagged, on Sony cameras.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Grohle-developer/lenscatalog/releases/latest"><img src="https://img.shields.io/github/v/release/Grohle-developer/lenscatalog?color=FF8800&label=release" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-333333" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/camera-Sony%20PMCA-000000" alt="Sony PMCA">
+  <img src="https://img.shields.io/badge/tested%20on-A7%20II-000000" alt="Tested on the A7 II">
+  <img src="https://img.shields.io/badge/Android-2.3%20%C2%B7%20API%2010-555555" alt="Android 2.3, API 10">
+</p>
+
+<p align="center">
+  <a href="https://buymeacoffee.com/grohle"><img src="docs/media/donate.svg" height="56" alt="Buy me a coffee"></a>
+</p>
+
+---
 
 A PlayMemories Camera App (PMCA) for the **Sony A7 II** (Android 2.3.7, API 10):
 a catalog of manual and adapted lenses that injects EXIF data **before capture**

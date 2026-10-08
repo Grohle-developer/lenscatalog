@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="LensCatalog">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1c1c"/><stop offset="1" stop-color="#000"/>
+    </linearGradient>
+  </defs>
+  <rect width="256" height="256" rx="51.2" fill="url(#tile)"/>
+  <g fill="none" stroke="#FF8800" stroke-width="15.36" stroke-linecap="round">
+    <circle cx="128.0" cy="128.0" r="90.16"/>
+    <line x1="160.79" y1="146.93" x2="115.45" y2="217.28"/>
+    <line x1="128.00" y1="165.87" x2="44.41" y2="161.77"/>
+    <line x1="95.21" y1="146.93" x2="56.95" y2="72.49"/>
+    <line x1="95.21" y1="109.07" x2="140.55" y2="38.72"/>
+    <line x1="128.00" y1="90.13" x2="211.59" y2="94.23"/>
+    <line x1="160.79" y1="109.07" x2="199.05" y2="183.51"/>
+  </g>
+</svg>
