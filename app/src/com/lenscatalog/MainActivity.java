@@ -28,7 +28,7 @@ public class MainActivity extends Activity implements MenuView.Listener {
         // Init the card log first, so every later AppLog.i() is recorded.
         try {
             java.io.File ext = android.os.Environment.getExternalStorageDirectory();
-            AppLog.init(new java.io.File(ext, "AINTFILM"));
+            AppLog.init(new java.io.File(ext, AppLog.DIR));
             // Stamp the log with the camera's clock (Android's starts at 1970 on the camera).
             AppLog.setCameraClock(Sony.cameraLocalMillis());
             AppLog.i("LensCatalog start" + (AppLog.hasCameraClock() ? " (camera clock)" : ""));
@@ -41,10 +41,15 @@ public class MainActivity extends Activity implements MenuView.Listener {
         view.setVersion(versionName());
         setContentView(view);
         final LensLog lensLog = new LensLog(this);
-        Catalog catalog = Catalog.load(this);
+        // the lenses added on the camera: the app's copy, plus what the card has that it lacks
+        UserLenses mine = new UserLenses(getFilesDir(),
+                android.os.Environment.getExternalStorageDirectory(), versionName());
+        mine.load();
+        Catalog catalog = Catalog.load(this, mine);
         AppLog.i("catalogue: " + (catalog.userCopy ? "card" : "built-in") + ", "
-                + catalog.lenses.size() + " lenses, " + catalog.brands.size() + " brands");
-        view.init(catalog, new Store(this), sony, lensLog);
+                + catalog.lenses.size() + " lenses, " + catalog.brands.size() + " brands"
+                + (catalog.userLenses > 0 ? ", " + catalog.userLenses + " mine" : ""));
+        view.init(catalog, new Store(this), sony, lensLog, mine);
         view.showChecking();
         // open the framework off the first draw; never block the UI thread long
         view.post(new Runnable() {

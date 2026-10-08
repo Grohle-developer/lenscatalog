@@ -86,8 +86,9 @@ clock1970() { adb_ shell date -s 19700101.000500 >/dev/null 2>&1; }
 clock1970
 rm -rf "$OUT/shots" "$OUT/photos" && mkdir -p "$OUT/shots" "$OUT/photos" "$OUT/fixtures"
 python3 "$ROOT/app/test/exif_fixtures.py" "$OUT/fixtures"
-adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm $CARD/AINTFILM/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json; rm $CARD/DCIM/LENSES/LENSES.JSN; rm $CARD/AINTFILM/AINTFILM.LOG" >/dev/null 2>&1
-adb_ shell "mkdir $CARD/DCIM; mkdir $DCIM; mkdir $CARD/LCSIM; mkdir $CARD/AINTFILM; mkdir $CARD/AINTFILM/SIM" >/dev/null 2>&1
+# (and nothing of aintfilm's: the app's folder is /LENSCAT, and an /AINTFILM left by an older build goes)
+adb_ shell "rm -r $DCIM; rm -r $CARD/LCSIM; rm -r $CARD/AINTFILM; rm $CARD/LENSCAT/SIM/LENS.TXT; rm $CARD/DCIM/LENSES/lenses.json; rm $CARD/DCIM/LENSES/LENSES.JSN; rm $CARD/LENSCAT/LENSCAT.LOG; rm $CARD/LENSCAT/MYLENSES.JSN; rm $CARD/LENSCAT/MYLENSES.BAD" >/dev/null 2>&1
+adb_ shell "mkdir $CARD/DCIM; mkdir $DCIM; mkdir $CARD/LCSIM; mkdir $CARD/LENSCAT; mkdir $CARD/LENSCAT/SIM" >/dev/null 2>&1
 cp "$OUT/fixtures/sony.jpg" "$OUT/fixtures/CAMERA.JPG"
 # the raw file of a RAW+JPEG shot: LC_ARW=<a real .ARW>, else the fixture's outline of one
 ARW="${LC_ARW:-$OUT/fixtures/sony.arw}"
@@ -154,7 +155,7 @@ wait_log "tagger: done" 120 || true
 sleep 1
 shot 15-etiquetado
 check "tagger: 5 tagged (4 JPEG + 1 ARW), 0 failed, though the app's clock says 1970" logged "tagger: done tagged=5 already=0 failed=0 skippedEl=0 noSession=0"
-card_log() { adb_ shell cat $CARD/AINTFILM/AINTFILM.LOG | tr -d '\r'; }
+card_log() { adb_ shell cat $CARD/LENSCAT/LENSCAT.LOG | tr -d '\r'; }
 # (the applies and the tagging of steps 2-5: the log up to the first "tagger: done")
 # (stamped "boot+HH:MM:SS": the app knows Android's clock is unset, and the simulator has no camera clock)
 applied_in_1970() {
@@ -228,7 +229,7 @@ shot 18-registro
 
 # ------------------------------------------------------------------ two models of one name
 say "7. Voigtlander Color Skopar 20mm: K, EF and F share one name; the EF one must open"
-key menu up up up up up up up enter down down down
+key menu up up up up up up up up enter down down down       # from View log, up through the tools to the last brands
 shot 19-modelos-mismo-nombre
 key enter
 shot 20-ficha-montura-ef
@@ -237,14 +238,14 @@ check "EF version applied (last used = its id)" has_pref 'aspheric-2</string>'
 check "no crash so far" no_crash
 
 # ------------------------------------------------------------------ an electronic lens
-say "8. An electronic lens (sim: /AINTFILM/SIM/LENS.TXT): nothing to do, and its photos are skipped"
-adb_ shell "echo 'FE 28-70mm F3.5-5.6 OSS' > $CARD/AINTFILM/SIM/LENS.TXT"
+say "8. An electronic lens (sim: /LENSCAT/SIM/LENS.TXT): nothing to do, and its photos are skipped"
+adb_ shell "echo 'FE 28-70mm F3.5-5.6 OSS' > $CARD/LENSCAT/SIM/LENS.TXT"
 start
 shot 21-objetivo-electronico
 check "electronic lens read" logged "SIM electronic lens from LENS.TXT: FE 28-70mm F3.5-5.6 OSS"
 key menu
 sleep 3; shoot DSC00005.JPG
-adb_ shell rm $CARD/AINTFILM/SIM/LENS.TXT
+adb_ shell rm $CARD/LENSCAT/SIM/LENS.TXT
 start
 sleep 2
 key enter
@@ -297,17 +298,166 @@ for _ in $(seq 1 30); do focused launcher && break; sleep 1; done   # the emulat
 check "auto-exit: back to the camera after Apply" focused launcher
 check "no crash" no_crash
 
+# ------------------------------------------------------------------ a lens of your own
+# Typed on the camera: the on-screen keyboard is walked with the four-way, the
+# way a person does it. The walk is worked out here from the keyboard's layout
+# (Keyboard.java: the same rows, the same cursor rules), one line of keys a
+# character; what comes out is checked at the end, in the catalogue and the EXIF.
+say "12. A lens of your own, typed on the camera's keyboard"
+keys_for() { # text -> lines of keys (one per character), for `key`
+  python3 - "$1" <<'PY'
+import sys
+LAYOUT = [["1","2","3","4","5","6","7","8","9","0","back"],
+          ["q","w","e","r","t","y","u","i","o","p","-"],
+          ["a","s","d","f","g","h","j","k","l",".","/"],
+          ["shift","z","x","c","v","b","n","m",":","(",")"],
+          ["clear:2","space:5","'","+","done:2"]]
+rows = []
+for r in LAYOUT:
+    u, keys = 0, []
+    for spec in r:
+        name, span = (spec.split(":") + ["1"])[:2] if ":" in spec and spec != ":" else (spec, "1")
+        span = int(span)
+        keys.append((name, u, span)); u += span
+    rows.append(keys)
+row, col, anchor, shift = 1, 0, 0, 1   # Keyboard(): starts on q, shift once for an empty field
+def key_at(r, unit):
+    for c, (n, st, sp) in enumerate(rows[r]):
+        if st <= unit < st + sp: return c
+    return len(rows[r]) - 1
+def go(name):
+    global row, col, anchor
+    out = []
+    tr, tc = next((r, c) for r in range(len(rows)) for c, k in enumerate(rows[r]) if k[0] == name)
+    down = (tr - row) % len(rows); up = len(rows) - down
+    for _ in range(min(down, up)):
+        row = (row + (1 if down <= up else -1)) % len(rows); col = key_at(row, anchor)
+        out.append("down" if down <= up else "up")
+    n = len(rows[row]); right = (tc - col) % n; left = n - right
+    for _ in range(min(right, left)):
+        col = (col + (1 if right <= left else -1)) % n; anchor = rows[row][col][1]
+        out.append("right" if right <= left else "left")
+    return out
+for ch in sys.argv[1]:
+    seq = []
+    if ch.isalpha():
+        want_upper = ch.isupper()
+        while (shift != 0) != want_upper:        # shift cycles off, once, lock
+            seq += go("shift") + ["enter"]; shift = (shift + 1) % 3
+        seq += go(ch.lower()) + ["enter"]
+        if shift == 1: shift = 0
+    elif ch == " ":
+        seq += go("space") + ["enter"]
+    else:
+        seq += go(ch) + ["enter"]
+    print(" ".join(seq))
+PY
+}
+on_device() { adb_ shell "ls $1" | tr -d '\r' | grep "$(basename "$1")" >/dev/null; }   # a file exists on the guest
+type_text() { # the keys of a text, a character at a time (several keys a call: the emulator takes them in order)
+  # (read on its own descriptor: adb shell, inside `key`, would swallow the lines left on stdin)
+  while read -r -u 3 line; do KEYWAIT=0.7 key $line; done 3< <(keys_for "$1")
+}
+# (Meyer-Optik is a catalogue brand, so the lens files under it, last in its list; the brackets exercise the keyboard)
+MYBRAND="Meyer-Optik"; MYMODEL="Oreston 50mm f/1.8 (zebra)"; MYMOUNT="M42"
+MYID="my-meyer-optik-oreston-50mm-f-1-8-zebra-m42"
+MYFILE=$CARD/LENSCAT/MYLENSES.JSN
+APPFILE=/data/data/$PKG/files/mylenses.json
+start
+key up enter                                   # auto-exit off again (step 11 turned it on)
+key up up up up enter                          # View log, Diagnostics, Manual data, Add a lens
+shot 29-anadir-objetivo
+key enter                                      # the brand: the keyboard
+type_text "$MYBRAND"
+shot 30-teclado
+key menu                                       # Done: back on the form
+key down enter; type_text "$MYMODEL"; key menu # the model
+key down enter; type_text "$MYMOUNT"; key menu # the mount
+key down down                                  # type stays Prime; focal stays 50 mm
+key down; key right right right right right right right right   # f/1.8
+shot 31-formulario
+key down enter                                 # Save
+sleep 2
+shot 32-objetivo-guardado
+check "the lens is saved in the app and on the card" logged "my lenses: saved $MYID \"$MYBRAND $MYMODEL\""
+check "the card's copy is the catalogue's format and holds the lens" python3 - "$(adb_ shell cat $MYFILE | tr -d '\r')" <<'PY'
+import json, sys
+d = json.loads(sys.argv[1])
+b = [x for x in d["brands"] if x["brand"] == "Meyer-Optik"]
+m = [x for x in b[0]["models"] if x["id"].startswith("my-")][0]
+assert m["model"] == "Oreston 50mm f/1.8 (zebra)" and m["mount"] == "M42" and m["type"] == "prime"
+assert m["focal"] == 50 and abs(m["max_aperture"] - 1.8) < 1e-9 and m["id"] == "my-meyer-optik-oreston-50mm-f-1-8-zebra-m42"
+PY
+check "the app's own copy exists" on_device $APPFILE
+key menu                                       # the result closes onto the brand's list
+shot 33-marca-propia
+key enter                                      # the lens's page: with its MINE chip, Edit and Delete
+shot 34-ficha-propia
+clock1970; key enter                           # Apply
+check "the lens of your own applied: its name in the pre-capture EXIF" logged "setExifInfo(lensName=\"$MYBRAND $MYMODEL\", focal=50/1"
+sleep 2; shoot DSC00006.JPG
+key menu; clock1970; key enter                 # home -> Write EXIF
+wait_log "tagger: done" 120 || true
+adb_ pull $DCIM/DSC00006.JPG "$OUT/photos/DSC00006.JPG" >/dev/null 2>&1
+if command -v exiftool >/dev/null; then
+  check "DSC00006.JPG: LensMake and LensModel are the lens of your own" bash -c \
+    "exiftool -s -S -LensMake -LensModel -FocalLength -FNumber -n '$OUT/photos/DSC00006.JPG' | tr '\n' '|' | grep -F 'Meyer-Optik|Meyer-Optik Oreston 50mm f/1.8 (zebra)|50|1.8|' >/dev/null"
+fi
+# a new card: the card's copy is gone; the app's carries the lens, and the card's is written again
+adb_ shell rm $MYFILE
+start
+check "a new card: the lens is still there, from the app's copy" logged "my lenses: 1"
+check "and the card gets its copy back" on_device $MYFILE
+# a reinstall, or a second body: the app's copy is gone; the card's brings the lens back
+adb_ shell pm clear $PKG >/dev/null
+start
+check "a reinstall: the lens comes back from the card" logged "my lenses: 1 (1 imported from the card)"
+check "and the app's copy is written again" on_device $APPFILE
+# delete it: OK twice on its page
+MYIDX=$(python3 - "$ROOT/app/assets/lenses.json" "$MYBRAND" <<'PY'
+import json, sys
+brands = [b["brand"] for b in json.load(open(sys.argv[1]))["brands"]]
+low = [b.lower() for b in brands]
+if sys.argv[2].lower() in low:            # a catalogue brand: its own row
+    i = low.index(sys.argv[2].lower())
+else:                                     # a new one: where Catalog.applyUser slots it, alphabetically
+    i = len(brands)
+    for k, b in enumerate(low):
+        if b > sys.argv[2].lower(): i = k; break
+print(i)
+PY
+)
+downs=""; for _ in $(seq 1 $((MYIDX + 2))); do downs="$downs down"; done   # Favourites, then the brands
+key $downs
+shot 35-marca-en-catalogo
+key enter up enter                             # the brand's list; the lens of your own is its last model
+key down down down down down                   # Apply, correction, adjust, favourites, Edit, Delete
+key enter                                      # armed: "Delete? Press OK again"
+shot 36-borrar
+key enter                                      # deleted
+check "deleted from the app and the card" logged "my lenses: removed $MYID"
+check "the card's copy is empty now" python3 - "$(adb_ shell cat $MYFILE | tr -d '\r')" <<'PY'
+import json, sys
+assert json.loads(sys.argv[1])["brands"] == []
+PY
+key menu
+check "no crash" no_crash
+
 # Every file the app left on the card has an 8.3 upper-case name: the camera's card
 # takes no other kind (0.3.2's DSC02073.JPG.exiftmp failed there). The simulator's
 # card is vfat, so a long name would have been created, and shows up here.
-say "12. The names the app left on the card"
-card_names() { adb_ shell "ls -R $CARD/DCIM $CARD/AINTFILM" | tr -d '\r' | grep -vE '^(/|$)'; }
+say "13. The names the app left on the card"
+card_names() { adb_ shell "ls -R $CARD/DCIM $CARD/LENSCAT" | tr -d '\r' | grep -vE '^(/|$)'; }
 card_names | sed 's/^/  card: /' | head -40
 not83() { card_names | grep -vE '^[A-Z0-9_~-]{1,8}(\.[A-Z0-9_~-]{1,3})?$'; }
 has_photos() { card_names | grep -q "DSC00001.JPG"; }
 check "the card listing has the photographs (the audit is not vacuous)" has_photos
 check "every name on the card is 8.3, upper case" test -z "$(not83)"
 not83 | sed 's/^/  NOT 8.3: /'
+check "the app writes nothing in aintfilm's folder (/AINTFILM)" test "$(adb_ shell "ls $CARD/AINTFILM >/dev/null 2>&1 && echo yes || echo no" | tr -d '\r')" = "no"
+# (grep without -q: with pipefail, a grep that quits early leaves adb a broken pipe and the check red)
+log_has_start() { card_log | grep "LensCatalog start" >/dev/null; }
+check "the log is the app's own: /LENSCAT/LENSCAT.LOG" log_has_start
 
 say "screens in $OUT/shots, photographs in $OUT/photos"
 if [ "$fails" -eq 0 ]; then say "ALL CHECKS PASSED"; else say "$fails CHECK(S) FAILED"; fi

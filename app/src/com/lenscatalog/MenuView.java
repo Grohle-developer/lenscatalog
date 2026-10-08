@@ -21,7 +21,9 @@ import java.util.List;
  *
  * Screens: CHECKING -> HOME -> FAVORITES | MODELS -> CONFIRM -> TOAST
  * (auto-exit); MANUAL (form); ELENS (electronic lens: nothing to do).
- * LCCORR (lens-correction editor, from CONFIRM); DIAG; LOG.
+ * LCCORR (lens-correction editor, from CONFIRM); DIAG; LOG. ADDLENS (the
+ * form that adds a lens of your own, or edits one: UserLenses) and KEYBOARD
+ * (its text fields, typed key by key: Keyboard).
  * Zooms go straight to CONFIRM with the wide end: no manual focal step
  * (Berto 2026-10-06).
  *
@@ -38,7 +40,7 @@ final class MenuView extends View {
 
     static final int ST_CHECKING = 0, ST_HOME = 1, ST_FAVORITES = 2, ST_MODELS = 3,
             ST_MANUAL = 4, ST_CONFIRM = 5, ST_TOAST = 6, ST_ELENS = 7, ST_LCCORR = 8,
-            ST_DIAG = 9, ST_LOG = 10;
+            ST_DIAG = 9, ST_LOG = 10, ST_ADDLENS = 11, ST_KEYBOARD = 12;
 
     // Palette: Sony's menu black and orange. Each value is #RGB with its digits
     // doubled, i.e. exactly one of the camera's 4-bit levels.
@@ -51,7 +53,7 @@ final class MenuView extends View {
     private static final int H = 480, HEADER_H = 56, FOOTER_TOP = 436,
             BODY_TOP = HEADER_H + 4, BODY_BOTTOM = FOOTER_TOP - 4;
     private static final int ROW_H = 50, SECTION_H = 30, LENS_ROW_H = 62, LC_ROW_H = 37,
-            DIAG_ROW_H = 44, LOG_ROW_H = 28, STEP_ROW_H = 64;
+            DIAG_ROW_H = 44, LOG_ROW_H = 28, STEP_ROW_H = 64, FORM_ROW_H = 44;
     /** Text sizes: title, row, secondary, small. Nothing under 15 px on a 3" screen. */
     private static final float T_TITLE = 23, T_ROW = 21, T_SUB = 17, T_SMALL = 15;
 
@@ -66,6 +68,7 @@ final class MenuView extends View {
     private Store store;
     private Sony sony;
     private LensLog lensLog;
+    private UserLenses mine;
     private Context ctx;
     private String version = "";
 
@@ -99,6 +102,31 @@ final class MenuView extends View {
     private static final String[] APS =
         { "—", "1.0", "1.2", "1.4", "1.7", "1.8", "2", "2.8", "3.5", "4", "5.6", "8", "11", "16", "22" };
 
+    // the add-a-lens form (ST_ADDLENS) and its keyboard (ST_KEYBOARD)
+    private static final int F_BRAND = 0, F_MODEL = 1, F_MOUNT = 2, F_TYPE = 3, F_FOCAL = 4,
+            F_FOCAL_MAX = 5, F_AP = 6, F_SAVE = 7;
+    /** The apertures the form offers; finer than the manual form's, for a lens that will be kept. */
+    private static final String[] FORM_APS = { "—", "0.95", "1.0", "1.1", "1.2", "1.4", "1.5", "1.7", "1.8",
+            "2", "2.4", "2.5", "2.8", "3.2", "3.5", "4", "4.5", "5", "5.6", "6.3", "8", "11", "16", "22" };
+
+    private static final class Form {
+        String brand = "", model = "", mount = "";
+        boolean zoom;
+        int focal = 50, focalMax = 135, apIdx;
+        /** The lens being edited (its id is kept), or null when adding. */
+        Catalog.Lens editing;
+    }
+
+    private Form form;
+    /** What stopped a save ("Model missing"), shown under the form until the next key. */
+    private String formError;
+    private Keyboard kb;
+    private int kbField;
+    /** The delete row of a lens of your own has been pressed once; the next press deletes. */
+    private boolean delArmed;
+    /** Where closing a result card goes instead of home (the new lens's page, say). */
+    private Runnable resultBack;
+
     // lens-correction working copy for the lens being confirmed
     private boolean lcEnabled;
     private int[] lcLevels = new int[Store.LC_N];
@@ -112,7 +140,8 @@ final class MenuView extends View {
     private static final int I_NONE = -1, I_APERTURE = 0, I_STAR = 1, I_STAR_O = 2, I_CHECK = 3,
             I_CHEV = 4, I_LEFT = 5, I_RIGHT = 6, I_UP = 7, I_DOWN = 8, I_CENTER = 9, I_CLOCK = 10,
             I_PHOTO = 11, I_PENCIL = 12, I_INFO = 13, I_DOC = 14, I_POWER = 15, I_HALF = 16,
-            I_SLIDERS = 17, I_RESET = 18, I_ALERT = 19, I_CROSS = 20;
+            I_SLIDERS = 17, I_RESET = 18, I_ALERT = 19, I_CROSS = 20, I_PLUS = 21, I_TRASH = 22,
+            I_KEYBOARD = 23, I_BACKSPACE = 24;
 
     private static final class Row {
         final String label, sub;
@@ -131,6 +160,8 @@ final class MenuView extends View {
         int sw = -1;
         /** Lens rows: in the favourites. */
         boolean fav;
+        /** Lens rows: added on the camera (UserLenses). */
+        boolean mine;
         /** Diagnostics: 0 plain, 1 good, 2 bad, 3 not run. */
         int status;
         /** Where this row is, for coming back to it: "a<action>" or "b<brand>". */
@@ -153,7 +184,8 @@ final class MenuView extends View {
     private static final int A_FAVORITES = 1, A_LAST = 2, A_BRAND = 3, A_MANUAL = 4,
             A_MODEL = 5, A_FAVLENS = 6, A_APPLY = 7, A_TOGGLEFAV = 8, A_NOTHING = 9,
             A_LCTOGGLE = 10, A_LCCORR = 11, A_LCRESET = 12, A_DIAG = 13, A_TAG = 14,
-            A_LOG = 15, A_AUTOEXIT = 16, A_DUMP = 17;
+            A_LOG = 15, A_AUTOEXIT = 16, A_DUMP = 17, A_ADDLENS = 18, A_EDITLENS = 19, A_DELLENS = 20,
+            A_SAVE = 21;
 
     private final Typeface regular, medium;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -178,11 +210,12 @@ final class MenuView extends View {
         }
     }
 
-    void init(Catalog catalog, Store store, Sony sony, LensLog lensLog) {
+    void init(Catalog catalog, Store store, Sony sony, LensLog lensLog, UserLenses mine) {
         this.catalog = catalog;
         this.store = store;
         this.sony = sony;
         this.lensLog = lensLog;
+        this.mine = mine;
         this.ctx = getContext();
         logicalW = Screen.logicalWidth(screen.aspect, 640, 480, 480);
     }
@@ -242,6 +275,7 @@ final class MenuView extends View {
             rows.add(new Row(b, String.valueOf(n), A_BRAND).chev().key("b" + b));
         }
         rows.add(section(Text.get("sec_tools"), ""));
+        rows.add(new Row(Text.get("add_lens"), "", A_ADDLENS).icon(I_PLUS).chev().key("a" + A_ADDLENS));
         rows.add(new Row(Text.get("manual"), "", A_MANUAL).icon(I_PENCIL).chev().key("a" + A_MANUAL));
         rows.add(new Row(Text.get("diagnostics"), "", A_DIAG).icon(I_INFO).chev().key("a" + A_DIAG));
         rows.add(new Row(Text.get("view_log"), "", A_LOG).icon(I_DOC).chev().key("a" + A_LOG));
@@ -267,6 +301,13 @@ final class MenuView extends View {
         String n = String.valueOf(catalog.lenses.size());
         rows.add(new Row(Text.get("catalog_src"),
                 Text.fmt(catalog.userCopy ? "catalog_card" : "catalog_apk", n), A_NOTHING));
+        if (mine != null) {
+            String nm = String.valueOf(mine.size());
+            Row my = new Row(Text.get("my_lenses"), mine.cardError == null ? Text.fmt("my_lenses_card", nm)
+                    : Text.fmt("my_lenses_nocard", nm, mine.cardError), A_NOTHING);
+            my.status = mine.cardError == null ? 1 : 2;
+            rows.add(my);
+        }
         Row clock = new Row(Text.get("camera_clock"), AppLog.clockText(), A_NOTHING);
         clock.status = AppLog.hasCameraClock() ? 1 : 3;
         rows.add(clock);
@@ -293,7 +334,7 @@ final class MenuView extends View {
         return 0;
     }
 
-    /** Show the last lines of the card log (AINTFILM.LOG), the newest selected. */
+    /** Show the last lines of the card log (LENSCAT.LOG), the newest selected. */
     void showLog() {
         state = ST_LOG;
         title = Text.get("log_title");
@@ -345,6 +386,7 @@ final class MenuView extends View {
         Row r = new Row(label, specLine(l), action);
         r.lens = l;
         r.fav = store.isFavorite(l.id);
+        r.mine = l.user;
         r.chevron = true;
         return r;
     }
@@ -400,8 +442,260 @@ final class MenuView extends View {
             if (fav) f.iconColor = ACCENT;
             rows.add(f);
         }
+        if (lens.user && mine != null) {
+            rows.add(new Row(Text.get("edit_lens"), "", A_EDITLENS).icon(I_PENCIL).chev());
+            Row d = new Row(delArmed ? Text.get("delete_confirm") : Text.get("delete_lens"), "", A_DELLENS).icon(I_TRASH);
+            if (delArmed) d.iconColor = BAD;
+            rows.add(d);
+        }
+        if (!keepSel) delArmed = false;
         sel = keepSel && was < rows.size() ? was : 0;
         invalidate();
+    }
+
+    // ------------------------------------------------------------ a lens of your own
+    /** The form, empty, to add a lens. */
+    private void showAddLens() {
+        form = new Form();
+        formError = null;
+        showAddLens(F_BRAND);
+    }
+
+    /** The form filled from a lens of your own, to edit it (its id, favourites and correction are kept). */
+    private void showEditLens(Catalog.Lens l) {
+        form = new Form();
+        form.editing = l;
+        form.brand = l.brand;
+        form.model = l.model;
+        form.mount = l.mount == null ? "" : l.mount;
+        form.zoom = l.isZoom();
+        form.focal = l.isZoom() ? l.focalMin : l.focal;
+        form.focalMax = l.isZoom() ? l.focalMax : Math.max(l.focal, l.focalMax);
+        form.apIdx = nearestAperture(l.maxAperture);
+        formError = null;
+        showAddLens(F_BRAND);
+    }
+
+    /** The form's rows, the one for `field` selected. */
+    private void showAddLens(int field) {
+        state = ST_ADDLENS;
+        title = Text.get(form.editing != null ? "edit_lens" : "add_lens");
+        rows.clear();
+        top = 0;
+        formRow(F_BRAND, "f_brand");
+        formRow(F_MODEL, "f_model");
+        formRow(F_MOUNT, "f_mount");
+        formRow(F_TYPE, "f_type");
+        formRow(F_FOCAL, form.zoom ? "focal_min" : "focal");
+        if (form.zoom) formRow(F_FOCAL_MAX, "focal_max");
+        formRow(F_AP, "max_aperture");
+        Row save = new Row(Text.get("save"), "", A_SAVE).icon(I_CHECK);
+        save.index = F_SAVE;
+        rows.add(save);
+        sel = 0;
+        for (int i = 0; i < rows.size(); i++) if (rows.get(i).index == field) sel = i;
+        ensureVisible();
+        invalidate();
+    }
+
+    private void formRow(int field, String label) {
+        Row r = new Row(Text.get(label), "", A_NOTHING);
+        r.index = field;
+        rows.add(r);
+    }
+
+    /** The field the selected form row edits, or -1. */
+    private int formField() {
+        return state == ST_ADDLENS && sel >= 0 && sel < rows.size() ? rows.get(sel).index : -1;
+    }
+
+    private static boolean formTyped(int field) {
+        return field == F_BRAND || field == F_MODEL || field == F_MOUNT;
+    }
+
+    private static boolean formPicker(int field) {
+        return field == F_BRAND || field == F_MOUNT || field == F_TYPE || field == F_FOCAL
+                || field == F_FOCAL_MAX || field == F_AP;
+    }
+
+    private static int formMax(int field) {
+        return field == F_BRAND ? UserLenses.MAX_BRAND : field == F_MOUNT ? UserLenses.MAX_MOUNT : UserLenses.MAX_MODEL;
+    }
+
+    private String formValue(int field) {
+        switch (field) {
+            case F_BRAND: return form.brand;
+            case F_MODEL: return form.model;
+            case F_MOUNT: return form.mount;
+            default: return "";
+        }
+    }
+
+    private void setFormValue(int field, String v) {
+        switch (field) {
+            case F_BRAND: {
+                // a catalogue brand typed in any case is spelt the catalogue's way, so the lens lists under it
+                String b = catalog.brandNamed(v);
+                form.brand = b != null ? b : v;
+                break;
+            }
+            case F_MODEL: form.model = v; break;
+            case F_MOUNT: form.mount = v; break;
+        }
+    }
+
+    /** What a form row shows for its value. */
+    private String formText(int field) {
+        switch (field) {
+            case F_BRAND: return form.brand.length() > 0 ? form.brand : Text.get("f_empty");
+            case F_MODEL: return form.model.length() > 0 ? form.model : Text.get("f_empty");
+            case F_MOUNT: return form.mount.length() > 0 ? form.mount : Text.get("f_none");
+            case F_TYPE: return Text.get(form.zoom ? "zoom" : "prime");
+            case F_FOCAL: return form.focal + " " + Text.get("mm");
+            case F_FOCAL_MAX: return form.focalMax + " " + Text.get("mm");
+            case F_AP: return form.apIdx == 0 ? Text.get("f_none") : "f/" + FORM_APS[form.apIdx];
+            default: return "";
+        }
+    }
+
+    private static int nearestAperture(double f) {
+        if (!(f > 0)) return 0;
+        int best = 0;
+        double d = Double.MAX_VALUE;
+        for (int i = 1; i < FORM_APS.length; i++) {
+            double v = Double.parseDouble(FORM_APS[i]);
+            if (Math.abs(v - f) < d) { d = Math.abs(v - f); best = i; }
+        }
+        return best;
+    }
+
+    /** ◀ ▶ on a form row: the next brand or mount the catalogue knows, the type, the focal, the aperture. */
+    private void formAdjust(int field, int d) {
+        formError = null;
+        switch (field) {
+            case F_BRAND: {
+                List<String> bs = catalog.brands;
+                if (bs.isEmpty()) return;
+                int i = -1;
+                for (int k = 0; k < bs.size(); k++) if (bs.get(k).equalsIgnoreCase(form.brand)) i = k;
+                i = i < 0 ? (d > 0 ? 0 : bs.size() - 1) : ((i + (d > 0 ? 1 : -1)) % bs.size() + bs.size()) % bs.size();
+                form.brand = bs.get(i);
+                break;
+            }
+            case F_MOUNT: {
+                List<String> ms = catalog.mounts();
+                ms.add(0, "");
+                int i = 0;
+                for (int k = 0; k < ms.size(); k++) if (ms.get(k).equalsIgnoreCase(form.mount)) i = k;
+                i = ((i + (d > 0 ? 1 : -1)) % ms.size() + ms.size()) % ms.size();
+                form.mount = ms.get(i);
+                break;
+            }
+            case F_TYPE:
+                form.zoom = !form.zoom;
+                if (form.zoom && form.focalMax <= form.focal) form.focalMax = Math.min(UserLenses.FOCAL_MAX, form.focal * 2);
+                showAddLens(F_TYPE);
+                return;
+            case F_FOCAL:
+                form.focal = UserLenses.clampFocal(form.focal + d);
+                break;
+            case F_FOCAL_MAX:
+                form.focalMax = UserLenses.clampFocal(form.focalMax + d);
+                break;
+            case F_AP:
+                form.apIdx = ((form.apIdx + (d > 0 ? 1 : -1)) % FORM_APS.length + FORM_APS.length) % FORM_APS.length;
+                break;
+        }
+        invalidate();
+    }
+
+    /** The keyboard, for one of the form's text fields. */
+    private void showKeyboard(int field) {
+        kbField = field;
+        kb = new Keyboard(formValue(field), formMax(field));
+        state = ST_KEYBOARD;
+        title = Text.get(field == F_BRAND ? "f_brand" : field == F_MOUNT ? "f_mount" : "f_model");
+        invalidate();
+    }
+
+    /** Leaving the keyboard: what was typed, cleaned, into the field; back to the form on that row. */
+    private void keyboardDone() {
+        setFormValue(kbField, UserLenses.clean(kb.text(), formMax(kbField)));
+        kb = null;
+        formError = null;
+        showAddLens(kbField);
+    }
+
+    /** Save the form as a lens of your own: in the app, then on the card; then its page in the catalogue. */
+    private void saveLens() {
+        if (form.model.length() == 0) {
+            formError = Text.get("need_model");
+            showAddLens(F_MODEL);
+            return;
+        }
+        if (form.brand.length() == 0) {
+            formError = Text.get("need_brand");
+            showAddLens(F_BRAND);
+            return;
+        }
+        final Catalog.Lens l = new Catalog.Lens();
+        l.id = form.editing != null ? form.editing.id : null;
+        l.brand = form.brand;
+        l.model = form.model;
+        l.mount = form.mount;
+        l.notes = form.editing != null ? form.editing.notes : "";
+        l.type = form.zoom ? "zoom" : "prime";
+        l.focal = form.focal;
+        l.focalMin = form.focal;
+        l.focalMax = form.zoom ? form.focalMax : form.focal;
+        if (form.apIdx > 0) {
+            try { l.maxAperture = Double.parseDouble(FORM_APS[form.apIdx]); }
+            catch (NumberFormatException e) { l.maxAperture = 0; }
+        }
+        UserLenses.Result r = mine.save(l);
+        catalog.applyUser(mine.all());
+        List<String[]> lines = new ArrayList<String[]>();
+        lines.add(new String[] { Text.get("res_lens"), l.displayName(), "" });
+        lines.add(new String[] { Text.get(form.zoom ? "range" : "focal"), specLine(l), "" });
+        lines.add(new String[] { Text.get("saved_app"), r.internalError == null ? Text.get("saved_ok") : r.internalError,
+                r.internalError == null ? "ok" : "bad" });
+        lines.add(new String[] { Text.get("saved_card"),
+                r.cardError == null ? "/" + UserLenses.CARD_DIR + "/" + UserLenses.CARD_FILE : r.cardError,
+                r.cardError == null ? "ok" : "bad" });
+        final boolean editing = form.editing != null;
+        resultBack = new Runnable() {
+            public void run() {
+                if (editing) showConfirm(l, l.isZoom() ? l.focalMin : l.focal);
+                else if (catalog.brands.contains(l.brand)) { confirmBack = ST_MODELS; showModels(l.brand, l); }
+                else showHome();
+            }
+        };
+        showResult(r.internalError == null ? RES_OK : RES_WARN, Text.get("saved_title"), lines,
+                r.internalError == null ? Text.get("saved_hint") : null, false);
+    }
+
+    /** The second press on Delete: the lens goes from the app and the card, and from favourites and last used. */
+    private void deleteLens() {
+        final Catalog.Lens l = lens;
+        if (l == null || !l.user) return;
+        final String b = l.brand;
+        mine.remove(l.id);
+        store.forget(l.id);
+        catalog.applyUser(mine.all());
+        delArmed = false;
+        List<String[]> lines = new ArrayList<String[]>();
+        lines.add(new String[] { Text.get("res_lens"), l.displayName(), "" });
+        lines.add(new String[] { Text.get("saved_app"), Text.get("deleted_title"), "ok" });
+        lines.add(new String[] { Text.get("saved_card"),
+                mine.cardError == null ? "/" + UserLenses.CARD_DIR + "/" + UserLenses.CARD_FILE : mine.cardError,
+                mine.cardError == null ? "ok" : "bad" });
+        resultBack = new Runnable() {
+            public void run() {
+                if (catalog.brands.contains(b)) showModels(b);
+                else showHomeAt("a" + A_ADDLENS);
+            }
+        };
+        showResult(RES_OK, Text.get("deleted_title"), lines, null, false);
     }
 
     /** Lens-correction editor: 9 level rows (◀ ▶ adjust, write-through to
@@ -496,12 +790,32 @@ final class MenuView extends View {
             // (a result with no count-down, such as a store dump, closes with MENU too)
             boolean closes = store != null && (!store.autoExit() || (toastUntil == 0 && resKind != RES_BUSY));
             if ((k == Keys.MENU || k == Keys.ENTER) && closes) {
-                showHome();
+                Runnable back = resultBack;
+                resultBack = null;
+                if (back != null) back.run(); else showHome();
                 return;
             }
             return;
         }
-        boolean editor = state == ST_MANUAL || state == ST_LCCORR;
+        if (state == ST_KEYBOARD) {
+            switch (k) {
+                case Keys.UP: kb.move(-1, 0); break;
+                case Keys.DOWN: kb.move(1, 0); break;
+                case Keys.LEFT: kb.move(0, -1); break;
+                case Keys.RIGHT: kb.move(0, 1); break;
+                case Keys.WHEEL_CW: kb.next(1); break;
+                case Keys.WHEEL_CCW: kb.next(-1); break;
+                case Keys.ENTER:
+                    kb.press();
+                    if (kb.done) { keyboardDone(); return; }
+                    break;
+                case Keys.MENU: keyboardDone(); return;
+            }
+            invalidate();
+            return;
+        }
+        if (state == ST_ADDLENS && formError != null && k != Keys.ENTER) formError = null;
+        boolean editor = state == ST_MANUAL || state == ST_LCCORR || state == ST_ADDLENS;
         switch (k) {
             case Keys.UP: move(-1); return;
             case Keys.DOWN: move(1); return;
@@ -522,21 +836,31 @@ final class MenuView extends View {
         }
     }
 
-    /** A held arrow speeds up on the focal picker: 1 mm, then 5, then 10. */
+    /** A held arrow speeds up on the focal pickers: 1 mm, then 5, then 10. */
     private int step(int repeat) {
-        if (state != ST_MANUAL || sel != 0) return 1;
+        boolean focal = (state == ST_MANUAL && sel == 0)
+                || (state == ST_ADDLENS && (formField() == F_FOCAL || formField() == F_FOCAL_MAX));
+        if (!focal) return 1;
         return repeat < 8 ? 1 : repeat < 24 ? 5 : 10;
     }
 
     private boolean adjustable() {
         if (state == ST_MANUAL) return sel == 0 || sel == 1;
         if (state == ST_LCCORR) return sel >= 0 && sel < Store.LC_N;
+        if (state == ST_ADDLENS) return formPicker(formField());
         return false;
     }
 
     private void move(int d) {
         int n = rows.size();
         if (n == 0) return;
+        if (delArmed && state == ST_CONFIRM) {
+            // moving off the delete row disarms it
+            delArmed = false;
+            int keep = sel;
+            showConfirm(lens, chosenFocal, true);
+            sel = keep;
+        }
         int i = sel;
         for (int k = 0; k < n; k++) {
             i = (i + d + n) % n;
@@ -572,6 +896,11 @@ final class MenuView extends View {
     }
 
     private void adjust(int d) {
+        if (state == ST_ADDLENS) {
+            int f = formField();
+            if (formPicker(f)) formAdjust(f, d);
+            return;
+        }
         if (state == ST_MANUAL) {
             if (sel == 0) {
                 manFocal += d;
@@ -627,9 +956,39 @@ final class MenuView extends View {
                 }
                 return;
         }
+        if (state == ST_ADDLENS) {
+            int f = formField();
+            if (f == F_SAVE) saveLens();
+            else if (formTyped(f)) showKeyboard(f);
+            else if (f == F_TYPE) formAdjust(F_TYPE, 1);
+            else if (f >= 0) { sel = Math.min(sel + 1, rows.size() - 1); ensureVisible(); invalidate(); }
+            return;
+        }
         if (rows.isEmpty()) return;
         Row r = rows.get(sel);
+        if (r.action != A_DELLENS && delArmed) {
+            delArmed = false;
+            if (state == ST_CONFIRM) { int keep = sel; showConfirm(lens, chosenFocal, true); sel = keep; r = rows.get(sel); }
+        }
         switch (r.action) {
+            case A_ADDLENS: showAddLens(); break;
+            case A_SAVE: saveLens(); break;
+            case A_EDITLENS:
+                if (lens != null && lens.user) showEditLens(lens);
+                break;
+            case A_DELLENS:
+                if (lens != null && lens.user) {
+                    if (!delArmed) {
+                        delArmed = true;
+                        int keep = sel;
+                        showConfirm(lens, chosenFocal, true);
+                        sel = keep;
+                        invalidate();
+                    } else {
+                        deleteLens();
+                    }
+                }
+                break;
             case A_FAVORITES: showFavorites(); break;
             case A_DIAG: showDiag(); break;
             case A_TAG: tagPhotos(); break;
@@ -731,6 +1090,17 @@ final class MenuView extends View {
                 if (lens != null) showConfirm(lens, chosenFocal);
                 else showHome();
                 break;
+            case ST_ADDLENS:
+                if (form != null && form.editing != null) {
+                    Catalog.Lens l = form.editing;
+                    showConfirm(l, l.isZoom() ? l.focalMin : l.focal);
+                } else {
+                    showHomeAt("a" + A_ADDLENS);
+                }
+                break;
+            case ST_KEYBOARD:
+                keyboardDone();
+                break;
         }
     }
 
@@ -749,12 +1119,12 @@ final class MenuView extends View {
         new Thread(new Runnable() {
             public void run() {
                 final StoreDump.Result r = StoreDump.dump(new java.io.File(
-                        android.os.Environment.getExternalStorageDirectory(), "AINTFILM"), header);
+                        android.os.Environment.getExternalStorageDirectory(), AppLog.DIR), header);
                 post(new Runnable() {
                     public void run() {
                         List<String[]> l = new ArrayList<String[]>();
                         if (r.error == null) {
-                            l.add(new String[] { Text.get("store_file"), "/AINTFILM/" + r.file, "ok" });
+                            l.add(new String[] { Text.get("store_file"), "/" + AppLog.DIR + "/" + r.file, "ok" });
                             l.add(new String[] { Text.get("store_slots"), String.valueOf(r.slots), "" });
                         } else {
                             l.add(new String[] { Text.get("res_failed"), r.error, "bad" });
@@ -844,6 +1214,7 @@ final class MenuView extends View {
             case ST_LCCORR: return LC_ROW_H;
             case ST_DIAG: return DIAG_ROW_H;
             case ST_LOG: return LOG_ROW_H;
+            case ST_ADDLENS: return FORM_ROW_H;
             default: return ROW_H;
         }
     }
@@ -1087,6 +1458,45 @@ final class MenuView extends View {
                 p.setStyle(Paint.Style.FILL);
                 c.drawCircle(cx, y + s * 0.76f, sw * 0.7f, p);
                 break;
+            case I_PLUS:
+                p.setStrokeWidth(sw * 1.3f);
+                c.drawLine(cx, y + s * 0.18f, cx, y + s * 0.82f, p);
+                c.drawLine(x + s * 0.18f, cy, x + s * 0.82f, cy, p);
+                break;
+            case I_TRASH:
+                // the lid, the can, two lines down it
+                c.drawLine(x + s * 0.16f, y + s * 0.24f, x + s * 0.84f, y + s * 0.24f, p);
+                c.drawLine(x + s * 0.38f, y + s * 0.24f, x + s * 0.42f, y + s * 0.12f, p);
+                c.drawLine(x + s * 0.42f, y + s * 0.12f, x + s * 0.58f, y + s * 0.12f, p);
+                c.drawLine(x + s * 0.58f, y + s * 0.12f, x + s * 0.62f, y + s * 0.24f, p);
+                path.moveTo(x + s * 0.24f, y + s * 0.3f);
+                path.lineTo(x + s * 0.3f, y + s * 0.9f);
+                path.lineTo(x + s * 0.7f, y + s * 0.9f);
+                path.lineTo(x + s * 0.76f, y + s * 0.3f);
+                c.drawPath(path, p);
+                c.drawLine(x + s * 0.42f, y + s * 0.42f, x + s * 0.44f, y + s * 0.78f, p);
+                c.drawLine(x + s * 0.58f, y + s * 0.42f, x + s * 0.56f, y + s * 0.78f, p);
+                break;
+            case I_KEYBOARD:
+                rf.set(x + 1, y + s * 0.22f, x + s - 1, y + s * 0.78f);
+                c.drawRoundRect(rf, 3, 3, p);
+                p.setStyle(Paint.Style.FILL);
+                for (int k = 0; k < 4; k++) c.drawCircle(x + s * (0.22f + k * 0.187f), y + s * 0.4f, sw * 0.7f, p);
+                for (int k = 0; k < 3; k++) c.drawCircle(x + s * (0.31f + k * 0.187f), y + s * 0.53f, sw * 0.7f, p);
+                c.drawRect(x + s * 0.3f, y + s * 0.62f, x + s * 0.7f, y + s * 0.62f + sw, p);
+                break;
+            case I_BACKSPACE:
+                // a key pointing left, with a cross in it
+                path.moveTo(x + s * 0.08f, cy);
+                path.lineTo(x + s * 0.34f, y + s * 0.2f);
+                path.lineTo(x + s * 0.92f, y + s * 0.2f);
+                path.lineTo(x + s * 0.92f, y + s * 0.8f);
+                path.lineTo(x + s * 0.34f, y + s * 0.8f);
+                path.close();
+                c.drawPath(path, p);
+                c.drawLine(x + s * 0.48f, y + s * 0.37f, x + s * 0.74f, y + s * 0.63f, p);
+                c.drawLine(x + s * 0.74f, y + s * 0.37f, x + s * 0.48f, y + s * 0.63f, p);
+                break;
         }
         p.setStyle(Paint.Style.FILL);
         p.setStrokeCap(Paint.Cap.BUTT);
@@ -1232,6 +1642,7 @@ final class MenuView extends View {
                 case ST_TOAST: drawResult(c); break;
                 case ST_CONFIRM: drawConfirm(c); break;
                 case ST_MANUAL: drawManual(c); break;
+                case ST_KEYBOARD: drawKeyboard(c); break;
                 default: drawListScreen(c); break;
             }
         } finally {
@@ -1271,6 +1682,8 @@ final class MenuView extends View {
                 return Text.fmt("log_lines", String.valueOf(rows.size()));
             case ST_LCCORR:
                 return lens != null ? lens.displayName() : "";
+            case ST_ADDLENS:
+                return "";
             default:
                 return rows.isEmpty() ? "" : position();
         }
@@ -1293,6 +1706,7 @@ final class MenuView extends View {
             case ST_DIAG: return I_INFO;
             case ST_LOG: return I_DOC;
             case ST_LCCORR: return I_SLIDERS;
+            case ST_ADDLENS: return form != null && form.editing != null ? I_PENCIL : I_PLUS;
             default: return I_APERTURE;
         }
     }
@@ -1312,6 +1726,7 @@ final class MenuView extends View {
             else if (state == ST_LCCORR && r.index >= 0) drawLcRow(c, r, s, y, h, right);
             else if (state == ST_LOG) drawLogRow(c, r, s, y, h, right);
             else if (state == ST_DIAG && r.action == A_NOTHING) drawDiagRow(c, r, s, y, h, right);
+            else if (state == ST_ADDLENS && r.index != F_SAVE) drawFormRow(c, r, s, y, h, right);
             else drawMenuRow(c, r, s, y, h, right);
             // the three groups of the correction editor: shading, colour fringes, distortion
             if (state == ST_LCCORR && (r.index == 4 || r.index == 6 || r.index == 8) && sel != i && sel != i + 1)
@@ -1320,6 +1735,11 @@ final class MenuView extends View {
         }
         if (bar) drawScrollbar(c);
         if (rows.isEmpty()) drawEmpty(c);
+        if (state == ST_ADDLENS && formError != null && y + 22 <= BODY_BOTTOM) {
+            icon(c, I_ALERT, 24, y + 2, 18, WARN);
+            font(regular, T_SMALL, WARN);
+            text(c, fit(formError, right - 60), 50, y + 11, -1);
+        }
         drawListLegend(c);
     }
 
@@ -1350,6 +1770,21 @@ final class MenuView extends View {
                 drawLegend(c, "", "updown", Text.get("lg_scroll"), "leftright", Text.get("lg_page"),
                         "MENU", Text.get("lg_back"));
                 break;
+            case ST_ADDLENS: {
+                int f = formField();
+                if (f == F_SAVE)
+                    drawLegend(c, "", "updown", Text.get("lg_choose"), "center", Text.get("lg_save"), "MENU", Text.get("lg_back"));
+                else if (f == F_BRAND || f == F_MOUNT)
+                    drawLegend(c, "", "updown", Text.get("lg_choose"), "leftright", Text.get(f == F_BRAND ? "lg_brands" : "lg_mounts"),
+                            "center", Text.get("lg_type"), "MENU", Text.get("lg_back"));
+                else if (f == F_MODEL)
+                    drawLegend(c, "", "updown", Text.get("lg_choose"), "center", Text.get("lg_type"), "MENU", Text.get("lg_back"));
+                else if (f == F_TYPE)
+                    drawLegend(c, "", "updown", Text.get("lg_choose"), "leftright", Text.get("lg_toggle"), "MENU", Text.get("lg_back"));
+                else
+                    drawLegend(c, "", "updown", Text.get("lg_choose"), "leftright", Text.get("lg_adjust"), "MENU", Text.get("lg_back"));
+                break;
+            }
             default:
                 drawLegend(c, "", "updown", Text.get("lg_choose"), "leftright", Text.get("lg_page"),
                         "center", Text.get("lg_open"), "MENU", Text.get("lg_back"));
@@ -1411,6 +1846,10 @@ final class MenuView extends View {
         rx -= 28;
         if (r.fav) {
             icon(c, I_STAR, rx - 18, y + h / 2f - 9, 18, s ? ON_ACCENT : ACCENT);
+            rx -= 28;
+        }
+        if (r.mine) {
+            icon(c, I_PENCIL, rx - 18, y + h / 2f - 9, 18, s ? ON_ACCENT : TEXT3);
             rx -= 28;
         }
         font(s ? medium : regular, 20, s ? ON_ACCENT : TEXT);
@@ -1485,6 +1924,91 @@ final class MenuView extends View {
         int col = r.status == 1 ? OK : r.status == 2 ? BAD : TEXT2;
         font(medium, 17, s ? ON_ACCENT : col);
         text(c, fit(r.sub, rx - 24 - lw - 20), rx, cy, 1);
+    }
+
+    /** A row of the add-a-lens form: its label, and its value in a picker (◀ ▶) or as typed text. */
+    private void drawFormRow(Canvas c, Row r, boolean s, int y, int h, float right) {
+        if (s) selection(c, y, h, right);
+        else fill(c, 24, y + h - 1, right - 8, y + h, RULE);
+        int f = r.index;
+        float cy = y + h / 2f;
+        font(s ? medium : regular, T_ROW, s ? ON_ACCENT : TEXT);
+        text(c, r.label, 24, cy, -1);
+        String v = formText(f);
+        boolean empty = (f == F_BRAND || f == F_MODEL) && formValue(f).length() == 0;
+        float bx1 = right - 16, bx0 = Math.max(W * 0.38f, bx1 - 330);
+        if (formPicker(f)) {
+            if (!s) round(c, bx0, cy - 17, bx1, cy + 17, 6, LINE, false, 2);
+            icon(c, I_LEFT, bx0 + 8, cy - 9, 18, s ? ON_ACCENT : TEXT2);
+            icon(c, I_RIGHT, bx1 - 26, cy - 9, 18, s ? ON_ACCENT : TEXT2);
+            font(medium, 20, s ? ON_ACCENT : empty ? TEXT3 : TEXT);
+            text(c, fit(v, bx1 - bx0 - 70), (bx0 + bx1) / 2f, cy, 0);
+        } else {
+            font(medium, 20, s ? ON_ACCENT : empty ? TEXT3 : TEXT);
+            float w = text(c, fit(v, bx1 - bx0 - 36), bx1, cy, 1);
+            if (formTyped(f)) icon(c, I_KEYBOARD, bx1 - w - 32, cy - 11, 22, s ? ON_ACCENT : TEXT3);
+        }
+    }
+
+    /** The keyboard: the text with its cursor, and the grid of keys, the one under the cursor in orange. */
+    private void drawKeyboard(Canvas c) {
+        drawHeader(c, I_KEYBOARD, title, Text.fmt("kb_chars", String.valueOf(kb.length()), String.valueOf(kb.maxLen)));
+        // the text
+        float x0 = 16, x1 = W - 16, t = BODY_TOP + 4, b = t + 52;
+        round(c, x0, t, x1, b, 8, CARD, true, 1);
+        font(regular, 24, TEXT);
+        String txt = kb.text();
+        float room = x1 - x0 - 28 - 4;
+        // long text: its end is what matters
+        while (txt.length() > 0 && tw("…" + txt) > room) txt = txt.substring(1);
+        if (txt.length() < kb.length()) txt = "…" + txt;
+        float w = text(c, txt, x0 + 14, (t + b) / 2f, -1);
+        fill(c, x0 + 14 + w + 2, (t + b) / 2f - 14, x0 + 14 + w + 4, (t + b) / 2f + 14, ACCENT);
+        // the grid
+        float gt = b + 12, unit = (W - 32) / (float) Keyboard.UNITS;
+        float rowH = (BODY_BOTTOM - 4 - gt) / kb.rows.length;
+        for (int r = 0; r < kb.rows.length; r++) {
+            for (int k = 0; k < kb.rows[r].length; k++) {
+                Keyboard.Key key = kb.rows[r][k];
+                boolean s = r == kb.row && k == kb.col;
+                float l = 16 + key.start * unit + 3, rr = 16 + (key.start + key.span) * unit - 3;
+                float tt = gt + r * rowH + 3, bb = gt + (r + 1) * rowH - 3;
+                float cx = (l + rr) / 2f, cy = (tt + bb) / 2f;
+                int fg = s ? ON_ACCENT : TEXT;
+                if (s) round(c, l, tt, rr, bb, 6, ACCENT, true, 1);
+                else round(c, l, tt, rr, bb, 6, key.kind == Keyboard.DONE ? ACCENT : LINE, false, 2);
+                switch (key.kind) {
+                    case Keyboard.CH:
+                        font(medium, 26, fg);
+                        text(c, String.valueOf(kb.charOf(key)), cx, cy, 0);
+                        break;
+                    case Keyboard.SPACE:
+                        font(regular, 16, s ? ON_ACCENT : TEXT2);
+                        text(c, Text.get("kb_space"), cx, cy, 0);
+                        break;
+                    case Keyboard.BACK:
+                        icon(c, I_BACKSPACE, cx - 13, cy - 13, 26, s ? ON_ACCENT : TEXT2);
+                        break;
+                    case Keyboard.CLEAR:
+                        font(regular, 16, s ? ON_ACCENT : TEXT2);
+                        text(c, Text.get("kb_clear"), cx, cy, 0);
+                        break;
+                    case Keyboard.DONE:
+                        font(medium, 18, s ? ON_ACCENT : ACCENT);
+                        text(c, Text.get("kb_done"), cx, cy, 0);
+                        break;
+                    case Keyboard.SHIFT: {
+                        boolean on = kb.shift != Keyboard.SHIFT_OFF;
+                        int col = s ? ON_ACCENT : on ? ACCENT : TEXT2;
+                        icon(c, I_UP, cx - 12, cy - 14, 24, col);
+                        if (kb.shift == Keyboard.SHIFT_LOCK) fill(c, cx - 8, cy + 9, cx + 8, cy + 12, col);
+                        break;
+                    }
+                }
+            }
+        }
+        drawLegend(c, "", "updown", Text.get("lg_move"), "leftright", Text.get("lg_move"),
+                "center", Text.get("lg_type"), "MENU", Text.get("lg_done"));
     }
 
     /** The manual form: two pickers (◀ value ▶) and Apply, with what EXIF will say. */
@@ -1567,7 +2091,8 @@ final class MenuView extends View {
         cx = chip(c, cx, cyChips, zoom ? Text.get("zoom") : Text.get("prime"), zoom ? ACCENT : TEXT2) + 8;
         cx = chip(c, cx, cyChips, zoom ? lens.focalMin + "–" + lens.focalMax + " mm" : lens.focal + " mm", TEXT2) + 8;
         if (lens.maxAperture > 0) cx = chip(c, cx, cyChips, "f/" + fmtF(lens.maxAperture), TEXT2) + 8;
-        if (lens.mount != null && lens.mount.length() > 0) chip(c, cx, cyChips, lens.mount, TEXT2);
+        if (lens.mount != null && lens.mount.length() > 0) cx = chip(c, cx, cyChips, lens.mount, TEXT2) + 8;
+        if (lens.user) chip(c, cx, cyChips, Text.get("mine"), ACCENT);
         // what Apply sets
         float sy = cyChips + 13 + 12 + 13;
         float vx = x0 + pad + 64;

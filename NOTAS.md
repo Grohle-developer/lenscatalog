@@ -468,3 +468,80 @@ investigación de qué campo lee cada programa. Resultado:
   renderiza SVG: habrá que rasterizarlos a PNG o replicar las formas).
 - Datos dudosos heredados de lensfun (no corregidos): p. ej. Leica
   `Elmarit-M 1:2.8/28 Asph.` figura con `max_aperture` 2.0.
+
+## v0.4.0 — objetivos propios desde la cámara, teclado en pantalla, carpeta propia (2026-10-08)
+
+Petición de Berto: añadir un modelo nuevo desde la propia app, con un teclado
+para escribir nombre y fabricante; guardarlo en la app (no solo en la SD, por
+si cambia de tarjeta) y también en la SD, para que esos modelos lleguen a la
+app; y que el registro sea solo de LensCatalog, no compartido con aintfilm.
+
+### Teclado (`Keyboard.java`, `MenuView.drawKeyboard`)
+- La cámara no tiene pantalla táctil ni entrada de texto: el teclado es una
+  rejilla QWERTY de 11 unidades que se recorre con la cruceta (con vuelta en
+  los bordes), la rueda avanza tecla a tecla, y el botón central pulsa. Arriba
+  los dígitos y el retroceso; tres filas de letras con los signos que llevan
+  los nombres de objetivos (- . / : ( ) ' +); mayúsculas abajo a la izquierda
+  como en un teclado real, espacio ancho y «Listo» ancho. MENU también acepta.
+- Mayúsculas en tres estados, como en un móvil: apagado / una vez / fijo. Un
+  campo vacío empieza en «una vez», para que el nombre salga con su capital.
+- Al cambiar de fila, el cursor conserva su columna (el *anchor*): bajar por
+  la barra espaciadora y volver a subir devuelve a la misma letra.
+- El modelo es Java puro, sin `android.*`: `app/test/unit-test.sh` prueba
+  la rejilla, los movimientos, mayúsculas, el límite de longitud y «Listo»,
+  más la limpieza de `UserLenses`. La vista solo dibuja.
+
+### Formulario «Añadir objetivo» (ST_ADDLENS)
+- Filas: marca, modelo, montura, tipo (fijo/zoom), focal (o mín. y máx.),
+  apertura máxima, Guardar. Marca y montura: ◀ ▶ recorren las que conoce el
+  catálogo, OK abre el teclado; el modelo, OK abre el teclado. Focal con la
+  misma aceleración del formulario manual. La apertura, de una lista más
+  fina que la del manual (0.95 … 22).
+- Guardar comprueba: sin modelo o sin marca, selecciona el campo y lo dice
+  bajo el formulario. Una marca escrita con otra caja (`canon`) se escribe
+  como la del catálogo (`Canon`), para que el objetivo quede bajo ella.
+- El objetivo propio sale en la lista de su marca con un lápiz, lleva el chip
+  PROPIO en su ficha, y allí tiene «Editar objetivo» (mismo id: favoritos y
+  corrección se conservan) y «Borrar objetivo», que pide OK dos veces (la
+  primera cambia la fila a «¿Borrar? Pulsa OK otra vez»; moverse la desarma).
+  Al borrar se limpian también su favorito, su último usado y su corrección
+  (`Store.forget`).
+
+### Dónde se guardan (`UserLenses.java`)
+- Copia de referencia: `files/mylenses.json` en el almacenamiento de la app
+  (sobrevive al cambio de tarjeta). Copia en la tarjeta:
+  `/LENSCAT/MYLENSES.JSN`, 8.3, en el formato exacto de `assets/lenses.json`
+  (`brands` › `models`, con `_source` que dice de dónde viene), para leerlo en
+  el PC y pasar las entradas a la siguiente versión de la app.
+- Al arrancar se lee la de la app y se le suma lo que la tarjeta tenga y la
+  app no (ids nuevos): una reinstalación, o un segundo cuerpo con la misma
+  tarjeta, recupera los objetivos. Si falta la copia de la tarjeta (tarjeta
+  nueva), se vuelve a escribir. Si la de la tarjeta no se puede leer (una
+  edición a mano rota), se aparta como `MYLENSES.BAD` y se escribe la nuestra:
+  nada de nadie se pierde.
+- Escritura atómica (temporal + renombrado, con el *fallback* de la tarjeta
+  que no renombra encima). Límite de 500 objetivos; campos limpiados (espacios,
+  caracteres de control, longitudes 24/60/12, focal 1-3000, rango ordenado,
+  apertura a dos decimales). Los ids son `my-<marca>-<modelo>-<montura>`.
+- Diagnóstico muestra «Objetivos propios: N · tarjeta OK» (o el error).
+- Nota: al editar un objetivo cuya apertura viniera de un archivo editado a
+  mano con un valor que no está en la lista (f/2.9), el selector la ajusta al
+  más cercano.
+
+### Carpeta y registro propios
+- Todo lo que la app escribe en la tarjeta va a `/LENSCAT`: `LENSCAT.LOG` (y
+  `LENSCAT.OLD` al rotar), `MYLENSES.JSN`, los volcados `STORE001.TXT`… y, en
+  el simulador, `SIM/LENS.TXT`. Antes iba a `/AINTFILM`, la carpeta de
+  aintfilm. No se migra nada: aintfilm sigue escribiendo allí lo suyo.
+- El tour comprueba al final que `/AINTFILM` no existe y que
+  `/LENSCAT/LENSCAT.LOG` lleva el arranque de la app.
+
+### Tour
+- Paso 12 nuevo: escribe «Meyer-Optik» / «Oreston 50mm f/1.8» / «M42» con el
+  teclado (la secuencia de teclas se calcula en el propio tour a partir de la
+  misma rejilla y las mismas reglas del cursor: una línea de teclas por
+  carácter), elige f/1.8, guarda, comprueba el JSON de la tarjeta y la copia de
+  la app, aplica el objetivo, dispara y etiqueta (LensMake/LensModel en el
+  JPG), simula tarjeta nueva (borra el JSN: sigue y se reescribe), simula
+  reinstalación (`pm clear`: vuelve desde la tarjeta), y lo borra con OK dos
+  veces. La auditoría 8.3 es el paso 13 e incluye `/LENSCAT`.

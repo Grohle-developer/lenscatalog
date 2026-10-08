@@ -33,6 +33,7 @@ specific to that body, so it should work on the other cameras that support PMCA 
 (see the requirements below), but that has not been tried on any of them.
 
 ![home](shots/01-inicio.png) ![lens page](shots/10-ficha-zoom.png)
+![add a lens](shots/29-anadir-objetivo.png) ![keyboard](shots/30-teclado.png)
 
 ## What it does
 
@@ -88,10 +89,28 @@ specific to that body, so it should work on the other cameras that support PMCA 
   where you are, drawn marks (the camera's font has no symbols), a legend of
   the keys on every screen, and colours exactly on the camera's 4-bit levels.
   Text is the bundled Roboto.
+- **Add a lens on the camera**: *Tools › Add a lens* opens a form (brand, model,
+  mount, prime or zoom, focal length or range, maximum aperture) whose text
+  fields are typed on an **on-screen keyboard** driven by the four-way and
+  the control wheel (QWERTY, shift once or locked, backspace, clear). The
+  brand and mount rows also page through the ones the catalogue knows. A
+  lens of your own lists under its brand with a pencil mark, has a MINE chip
+  on its page, and can be edited or deleted there (delete asks for OK twice).
+  It is kept in **two places**: in the app's own storage, so it survives a
+  change of card, and on the card as `/LENSCAT/MYLENSES.JSN`, in the very
+  format of `lenses.json`, so a computer can read it and its entries can be
+  sent in for the next release. The two copies restore each other: a new
+  card gets the file written again, and a reinstall (or a second body with
+  the same card) imports what the card has. A card copy that cannot be parsed
+  is set aside as `MYLENSES.BAD`, never overwritten.
 - Bring your own catalog: drop a `LENSES.JSN` (the card holds 8.3 names only;
   a `lenses.json` copied from a computer shows there as `LENSES~1.JSO`, which
   is accepted too) in `/DCIM/LENSES/` on the memory card and the app prefers
   it over the built-in one.
+- Everything the app writes on the card lives in its own folder, `/LENSCAT`:
+  the log (`LENSCAT.LOG`, also shown in *Tools › View log*; it rolls to
+  `LENSCAT.OLD` at 512 KB), `MYLENSES.JSN`, and the settings-store dumps of
+  Diagnostics. All 8.3 upper-case names. Nothing is shared with aintfilm.
 
 ## Requirements
 
@@ -132,6 +151,8 @@ key is lost, users must uninstall first. A backup lives at
 (dev machine only, not in git).
 
 `app/tools/api-check.py` verifies every platform call exists on API 10.
+`app/test/unit-test.sh` tests the on-screen keyboard's model (layout, cursor,
+shift, limits) and the cleaning of what it types, on a bare JDK.
 `app/test/exif-test.sh` tests the EXIF writer on camera-like JPEGs and ARWs
 (javac + python3/PIL + exiftool; `ARW_SAMPLE=<file.ARW>` adds a real raw file,
 checked to decode identically with rawpy), including the embedded XMP and,
@@ -145,7 +166,9 @@ to rename: the photograph must come out tagged or byte-identical, never lost.
 lens correction, zoom, manual data, simulated shots (one RAW+JPEG;
 `LC_ARW=<file.ARW>` uses a real raw file), Write EXIF (the photos'
 EXIF checked with exiftool), diagnostics, log, an electronic lens, a card
-catalogue, wheel, paging and auto-exit, with screenshots in `out/tour/shots`.
+catalogue, wheel, paging, auto-exit, and a lens of your own typed on the
+keyboard (then applied, tagged, kept across a "new card" and a "reinstall",
+and deleted), with screenshots in `out/tour/shots`.
 
 ## Status
 
