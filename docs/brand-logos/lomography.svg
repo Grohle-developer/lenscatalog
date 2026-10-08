@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Lomography">
+  <title>Lomography</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#553388"/>
+    <circle cx="8" cy="8" r="3" fill="#775599"/><circle cx="8" cy="22" r="3" fill="#775599"/><circle cx="8" cy="36" r="3" fill="#775599"/><circle cx="8" cy="50" r="3" fill="#775599"/><circle cx="22" cy="8" r="3" fill="#775599"/><circle cx="22" cy="22" r="3" fill="#775599"/><circle cx="22" cy="36" r="3" fill="#775599"/><circle cx="22" cy="50" r="3" fill="#775599"/><circle cx="36" cy="8" r="3" fill="#775599"/><circle cx="36" cy="22" r="3" fill="#775599"/><circle cx="36" cy="36" r="3" fill="#775599"/><circle cx="36" cy="50" r="3" fill="#775599"/><circle cx="50" cy="8" r="3" fill="#775599"/><circle cx="50" cy="22" r="3" fill="#775599"/><circle cx="50" cy="36" r="3" fill="#775599"/><circle cx="50" cy="50" r="3" fill="#775599"/>
+    <circle cx="32" cy="32" r="22" fill="#332255"/>
+  </g>
+  <path d="M30.5 40.09V42.86H17.95V22.86H21.41V40.09ZM32.23 35.29Q32.23 32.07 34.06 29.9Q35.89 27.73 39.13 27.73Q42.36 27.73 44.18 29.84Q46 31.96 46.05 35.12V35.58Q46.05 38.82 44.23 40.98Q42.41 43.14 39.16 43.14Q35.89 43.14 34.06 40.98Q32.23 38.82 32.23 35.58ZM35.56 35.58Q35.56 37.59 36.42 39.02Q37.27 40.46 39.16 40.46Q41 40.46 41.86 39.02Q42.71 37.59 42.71 35.58V35.29Q42.71 33.33 41.86 31.87Q41 30.4 39.13 30.4Q37.27 30.4 36.42 31.87Q35.56 33.33 35.56 35.29Z" fill="#ffffff"/>
+</svg>

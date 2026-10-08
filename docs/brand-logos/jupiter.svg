@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Jupiter">
+  <title>Jupiter</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#772233"/>
+    <path d="M-44 72L-4 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M-32 72L8 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M-20 72L20 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M-8 72L32 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M4 72L44 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M16 72L56 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M28 72L68 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M40 72L80 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M52 72L92 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M64 72L104 -8" fill="none" stroke="#995555" stroke-width="3"/><path d="M76 72L116 -8" fill="none" stroke="#995555" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#551122"/>
+  </g>
+  <path d="M27.14 22.86H30.61V36.87Q30.61 39.87 28.74 41.5Q26.88 43.14 24.07 43.14Q21.22 43.14 19.38 41.67Q17.53 40.21 17.53 37.15H21Q21 38.88 21.86 39.62Q22.71 40.36 24.07 40.36Q25.41 40.36 26.28 39.46Q27.14 38.56 27.14 36.87ZM43.33 42.86 43.24 41.41Q41.79 43.14 39.07 43.14Q36.9 43.14 35.54 41.86Q34.18 40.58 34.16 37.66V28H37.5V37.63Q37.5 39.24 38.21 39.82Q38.92 40.4 39.86 40.4Q42.25 40.4 43.13 38.69V28H46.47V42.86Z" fill="#ffffff"/>
+</svg>

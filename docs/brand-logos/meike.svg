@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Meike">
+  <title>Meike</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#aa3300"/>
+    <circle cx="0" cy="0" r="22" fill="#bb6633"/><circle cx="64" cy="64" r="22" fill="#bb6633"/>
+    <circle cx="32" cy="32" r="22" fill="#662200"/>
+  </g>
+  <path d="M23.85 38.19 29.61 22.86H34.12V42.86H30.65V36.27L30.98 27.48L25.09 42.86H22.6L16.71 27.46L17.05 36.27V42.86H13.59V22.86H18.09ZM50.16 40.34Q49.45 41.38 48.05 42.26Q46.66 43.14 44.43 43.14Q41.12 43.14 39.23 41.08Q37.33 39.02 37.33 35.95V35.39Q37.33 31.87 39.27 29.8Q41.22 27.73 44.05 27.73Q47.29 27.73 48.85 29.79Q50.41 31.85 50.41 35.06V36.48H40.7Q40.83 38.19 41.86 39.33Q42.88 40.46 44.64 40.46Q46.93 40.46 48.36 38.62ZM44.05 30.4Q42.67 30.4 41.84 31.37Q41 32.33 40.75 34.03H47.1V33.78Q47.03 32.48 46.37 31.44Q45.71 30.4 44.05 30.4Z" fill="#ffffff"/>
+</svg>

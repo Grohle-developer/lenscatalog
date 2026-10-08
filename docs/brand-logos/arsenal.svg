@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Arsenal">
+  <title>Arsenal</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#aa3300"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#bb6633" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#bb6633" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#662200"/>
+  </g>
+  <path d="M18 43 25.56 23H28.68L36.26 43H32.63L31 38.33H23.25L21.63 43ZM24.23 35.54H30.04L27.12 27.22ZM44.62 31.08Q42.3 31.08 41.52 32.84V43H38.2V28.14H41.38L41.46 29.81Q42.65 27.86 44.82 27.86Q45.49 27.86 46 28.04L45.97 31.19Q45.28 31.08 44.62 31.08Z" fill="#ffffff"/>
+</svg>

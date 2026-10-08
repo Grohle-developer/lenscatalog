@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Panasonic">
+  <title>Panasonic</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#225577"/>
+    <circle cx="8" cy="8" r="3" fill="#557799"/><circle cx="8" cy="22" r="3" fill="#557799"/><circle cx="8" cy="36" r="3" fill="#557799"/><circle cx="8" cy="50" r="3" fill="#557799"/><circle cx="22" cy="8" r="3" fill="#557799"/><circle cx="22" cy="22" r="3" fill="#557799"/><circle cx="22" cy="36" r="3" fill="#557799"/><circle cx="22" cy="50" r="3" fill="#557799"/><circle cx="36" cy="8" r="3" fill="#557799"/><circle cx="36" cy="22" r="3" fill="#557799"/><circle cx="36" cy="36" r="3" fill="#557799"/><circle cx="36" cy="50" r="3" fill="#557799"/><circle cx="50" cy="8" r="3" fill="#557799"/><circle cx="50" cy="22" r="3" fill="#557799"/><circle cx="50" cy="36" r="3" fill="#557799"/><circle cx="50" cy="50" r="3" fill="#557799"/>
+    <circle cx="32" cy="32" r="22" fill="#113355"/>
+  </g>
+  <path d="M20.48 35.43V42.86H17.02V22.86H24.67Q28.15 22.86 30.05 24.66Q31.95 26.46 31.95 29.22Q31.95 32.12 30.05 33.78Q28.15 35.43 24.67 35.43ZM20.48 25.65V32.64H24.67Q26.69 32.64 27.58 31.7Q28.46 30.75 28.46 29.25Q28.46 27.85 27.58 26.75Q26.69 25.65 24.67 25.65ZM43.57 42.86Q43.33 42.35 43.19 41.46Q41.61 43.14 39.27 43.14Q37.05 43.14 35.63 41.86Q34.22 40.58 34.22 38.69Q34.22 36.31 35.99 35.05Q37.76 33.78 40.98 33.78H43.08V32.81Q43.08 31.64 42.43 30.95Q41.77 30.25 40.47 30.25Q39.27 30.25 38.57 30.84Q37.86 31.43 37.86 32.29H34.53Q34.53 30.53 36.19 29.13Q37.84 27.73 40.66 27.73Q43.16 27.73 44.79 29Q46.42 30.28 46.42 32.84V39.43Q46.42 41.43 46.98 42.63V42.86ZM43.08 38.67V35.87H41.05Q37.54 35.95 37.54 38.36Q37.54 39.25 38.15 39.85Q38.75 40.46 39.91 40.46Q41.06 40.46 41.9 39.9Q42.73 39.35 43.08 38.67Z" fill="#ffffff"/>
+</svg>

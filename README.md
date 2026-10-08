@@ -37,7 +37,7 @@ specific to that body, so it should work on the other cameras that support PMCA 
 
 ## What it does
 
-- Browse **1187 lenses across 48 brands** (M42, Pentax K, Minolta MD, Canon FD,
+- Browse **1956 lenses across 62 brands** (M42, Pentax K, Minolta MD, Canon FD,
   Canon EF, Nikon F, Contax/Yashica, Olympus OM, Leica M, and more — every mount
   adaptable to Sony E), with max aperture for every entry.
 - **One action applies everything**: sets the in-body stabilization focal length

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Steinheil">
+  <title>Steinheil</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <path d="M-4 16Q8 6 20 16T44 16T68 16" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 30Q8 20 20 30T44 30T68 30" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 44Q8 34 20 44T44 44T68 44" fill="none" stroke="#5566aa" stroke-width="3"/><path d="M-4 58Q8 48 20 58T44 58T68 58" fill="none" stroke="#5566aa" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M31.18 37.84Q31.18 36.65 30.39 35.93Q29.6 35.2 26.75 34.31Q23.9 33.43 22.12 32.05Q20.34 30.66 20.34 28.26Q20.34 25.84 22.3 24.28Q24.25 22.73 27.43 22.73Q30.82 22.73 32.73 24.53Q34.64 26.34 34.64 28.84H31.18Q31.18 27.37 30.26 26.43Q29.34 25.49 27.38 25.49Q25.56 25.49 24.69 26.28Q23.81 27.07 23.81 28.25Q23.81 29.37 24.86 30.11Q25.9 30.84 28 31.46Q31.4 32.45 33.02 33.93Q34.65 35.42 34.65 37.81Q34.65 40.34 32.72 41.8Q30.79 43.27 27.54 43.27Q25.61 43.27 23.82 42.57Q22.03 41.87 20.87 40.47Q19.71 39.07 19.71 36.96H23.18Q23.18 38.85 24.44 39.69Q25.7 40.53 27.54 40.53Q29.35 40.53 30.26 39.79Q31.18 39.04 31.18 37.84ZM44.29 42.95Q43.33 43.27 42.1 43.27Q40.43 43.27 39.34 42.33Q38.25 41.39 38.25 39.1V30.6H35.79V28.14H38.25V24.52H41.57V28.14H44.2V30.6H41.57V38.91Q41.57 39.91 42.01 40.2Q42.44 40.5 43.13 40.5Q43.7 40.5 44.29 40.36Z" fill="#ffffff"/>
+</svg>

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="7Artisans">
+  <title>7Artisans</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#225577"/>
+    <circle cx="46" cy="18" r="8" fill="none" stroke="#557799" stroke-width="3"/><circle cx="46" cy="18" r="15" fill="none" stroke="#557799" stroke-width="3"/><circle cx="46" cy="18" r="22" fill="none" stroke="#557799" stroke-width="3"/><circle cx="46" cy="18" r="29" fill="none" stroke="#557799" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#113355"/>
+  </g>
+  <path d="M29.09 23V24.84L21.1 43H17.58L25.58 25.68H15.23V23ZM30.51 43 38.06 23H41.18L48.77 43H45.14L43.5 38.33H35.76L34.14 43ZM36.73 35.54H42.54L39.63 27.22Z" fill="#ffffff"/>
+</svg>

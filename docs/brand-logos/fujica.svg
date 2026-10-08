@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Fujica">
+  <title>Fujica</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#225577"/>
+    <circle cx="0" cy="0" r="22" fill="#557799"/><circle cx="64" cy="64" r="22" fill="#557799"/>
+    <circle cx="32" cy="32" r="22" fill="#113355"/>
+  </g>
+  <path d="M18.32 42.86V22.86H31.01V25.65H21.78V31.61H29.83V34.39H21.78V42.86ZM42.54 42.86 42.45 41.41Q41 43.14 38.28 43.14Q36.11 43.14 34.75 41.86Q33.39 40.58 33.37 37.66V28H36.71V37.63Q36.71 39.24 37.42 39.82Q38.13 40.4 39.07 40.4Q41.46 40.4 42.34 38.69V28H45.68V42.86Z" fill="#ffffff"/>
+</svg>

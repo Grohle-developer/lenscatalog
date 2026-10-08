@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Contax">
+  <title>Contax</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#226644"/>
+    <polygon points="0,64 0,24 40,64" fill="#558877"/><polygon points="64,0 64,34 30,0" fill="#558877"/>
+    <circle cx="32" cy="32" r="22" fill="#114433"/>
+  </g>
+  <path d="M29.07 36.49H32.54Q32.27 39.4 30.33 41.34Q28.39 43.27 24.71 43.27Q21.01 43.27 18.83 40.71Q16.64 38.14 16.64 33.81V32.19Q16.64 27.88 18.87 25.3Q21.09 22.73 24.87 22.73Q28.46 22.73 30.35 24.67Q32.25 26.61 32.55 29.61H29.09Q28.87 27.7 27.94 26.61Q27.01 25.53 24.87 25.53Q22.51 25.53 21.33 27.25Q20.16 28.98 20.15 32.09V33.81Q20.15 36.8 21.21 38.64Q22.27 40.47 24.71 40.47Q26.95 40.47 27.89 39.44Q28.83 38.41 29.07 36.49ZM37.89 28.14 40.67 33.03 43.5 28.14H47.19L42.66 35.45L47.36 43H43.66L40.7 37.92L37.74 43H34.03L38.73 35.45L34.2 28.14Z" fill="#ffffff"/>
+</svg>

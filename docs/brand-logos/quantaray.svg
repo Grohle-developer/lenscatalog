@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" role="img" aria-label="Quantaray">
+  <title>Quantaray</title>
+  <desc>Original placeholder mark (monogram over a geometric motif); not the brand's real logo.</desc>
+  <defs><clipPath id="c"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#224499"/>
+    <path d="M32 32L74.5 43.4M32 32L43.4 74.5M32 32L0.9 63.1M32 32L-10.5 20.6M32 32L20.6 -10.5M32 32L63.1 0.9" fill="none" stroke="#5566aa" stroke-width="3"/><circle cx="32" cy="32" r="24" fill="none" stroke="#5566aa" stroke-width="3"/>
+    <circle cx="32" cy="32" r="22" fill="#222266"/>
+  </g>
+  <path d="M32.61 42.85 30.34 44.87 26.1 41.5Q25.23 41.68 24.3 41.68Q20.65 41.68 18.31 39.08Q15.98 36.48 15.98 31.91V30.91Q15.98 26.35 18.3 23.74Q20.62 21.13 24.27 21.13Q28.01 21.13 30.3 23.74Q32.58 26.35 32.58 30.91V31.91Q32.58 34.74 31.68 36.84Q30.77 38.93 29.16 40.16ZM29.11 30.88Q29.11 27.52 27.84 25.76Q26.57 24 24.27 24Q22.05 24 20.76 25.76Q19.47 27.52 19.47 30.88V31.91Q19.47 35.28 20.77 37.05Q22.08 38.82 24.3 38.82Q26.61 38.82 27.86 37.05Q29.11 35.28 29.11 31.91ZM44.88 41.41 44.8 39.95Q43.34 41.68 40.62 41.68Q38.45 41.68 37.09 40.4Q35.73 39.13 35.72 36.2V26.54H39.05V36.17Q39.05 37.78 39.76 38.36Q40.47 38.95 41.42 38.95Q43.81 38.95 44.69 37.23V26.54H48.02V41.41Z" fill="#ffffff"/>
+</svg>
