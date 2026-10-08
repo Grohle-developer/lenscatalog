@@ -290,7 +290,7 @@ check "holding the key repeats, and speeds up" test "${focal:-0}" -gt 58
 key menu
 say "11. Auto-exit back on: Apply leaves the app by itself"
 key up enter down down down enter enter     # auto-exit ON, then Last used -> Apply
-sleep 4
+for _ in $(seq 1 30); do focused launcher && break; sleep 1; done   # the emulator has no acceleration: poll, do not guess
 check "auto-exit: back to the camera after Apply" focused launcher
 check "no crash" no_crash
 
