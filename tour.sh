@@ -76,6 +76,9 @@ if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "$TOUR_LANG" ]
   adb_ shell setprop persist.sys.language "$TOUR_LANG"; adb_ shell setprop persist.sys.country "$TOUR_COUNTRY"
   adb_ shell stop; sleep 2; adb_ shell start; sleep 90
 fi
+# past the lock screen (the framework restart above locks it again); only while it
+# is up: on an unlocked screen that key opens a menu, and leaving the app lands there
+for _ in $(seq 1 10); do focused Keyguard || break; adb_ shell input keyevent 82 >/dev/null 2>&1; sleep 2; done
 adb_ shell pm clear $PKG >/dev/null
 # The emulator puts its clock back to the computer's now and then: it is set to
 # 1970 again right before each Apply and Write EXIF, the moments that matter.
