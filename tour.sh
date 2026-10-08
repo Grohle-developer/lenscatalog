@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # LensCatalog: the whole workflow, end to end, on aintfilm-sony's A7 II simulator
-# (Android 2.3.7 at 640x480, keys only), in Spanish, with screenshots and checks.
+# (Android 2.3.7 at 640x480, keys only), in English by default (TOUR_LANG=es TOUR_COUNTRY=ES
+# for Spanish), with screenshots and checks.
 #
 #   ./tour.sh [apk]          default: app/out/lenscatalog.apk
 #
@@ -20,6 +21,7 @@ SIMDIR="${AINTFILM_SONY:-$HOME/aintfilm-sony}/sim"
 SIM="$SIMDIR/sim.sh"
 APK="${1:-$ROOT/app/out/lenscatalog.apk}"
 OUT="${OUT:-$ROOT/out/tour}"
+TOUR_LANG="${TOUR_LANG:-en}"; TOUR_COUNTRY="${TOUR_COUNTRY:-US}"
 export SIM_OUT="$OUT"
 ADB="${AINTFILM_SIM_HOME:-$HOME/.cache/aintfilm-sony-sim}/sdk/platform-tools/adb"
 PKG=com.lenscatalog
@@ -69,11 +71,14 @@ wait_log() { for _ in $(seq 1 "${2:-120}"); do logged "$1" && return 0; sleep 1;
 # ------------------------------------------------------------------ setup
 "$SIM" boot
 "$SIM" install "$APK"
-if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "es" ]; then
-  say "the guest in Spanish (the framework restarts)"
-  adb_ shell setprop persist.sys.language es; adb_ shell setprop persist.sys.country ES
+if [ "$(adb_ shell getprop persist.sys.language | tr -d '\r')" != "$TOUR_LANG" ]; then
+  say "the guest in $TOUR_LANG (the framework restarts)"
+  adb_ shell setprop persist.sys.language "$TOUR_LANG"; adb_ shell setprop persist.sys.country "$TOUR_COUNTRY"
   adb_ shell stop; sleep 2; adb_ shell start; sleep 90
 fi
+# past the lock screen (the framework restart above locks it again); only while it
+# is up: on an unlocked screen that key opens a menu, and leaving the app lands there
+for _ in $(seq 1 10); do focused Keyguard || break; adb_ shell input keyevent 82 >/dev/null 2>&1; sleep 2; done
 adb_ shell pm clear $PKG >/dev/null
 # The emulator puts its clock back to the computer's now and then: it is set to
 # 1970 again right before each Apply and Write EXIF, the moments that matter.
@@ -288,7 +293,7 @@ check "holding the key repeats, and speeds up" test "${focal:-0}" -gt 58
 key menu
 say "11. Auto-exit back on: Apply leaves the app by itself"
 key up enter down down down enter enter     # auto-exit ON, then Last used -> Apply
-sleep 4
+for _ in $(seq 1 30); do focused launcher && break; sleep 1; done   # the emulator has no acceleration: poll, do not guess
 check "auto-exit: back to the camera after Apply" focused launcher
 check "no crash" no_crash
 
