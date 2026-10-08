@@ -25,6 +25,7 @@ final class Catalog {
         int focalMin, focalMax;    // zoom
         double maxAperture;        // 0 = unknown
         boolean manual;            // from the manual-data branch
+        boolean user;              // added on the camera (UserLenses): can be edited and deleted
 
         String displayName() { return brand + " " + model; }
         boolean isZoom() { return "zoom".equals(type); }
@@ -34,6 +35,66 @@ final class Catalog {
     final List<Lens> lenses = new ArrayList<Lens>();
     /** true when the user's /DCIM/LENSES/lenses.json was used. */
     boolean userCopy;
+    /** The brands of the seed (or the card's catalogue), in its order; the user's are merged in. */
+    private final List<String> seedBrands = new ArrayList<String>();
+    /** How many lenses were added on the camera (UserLenses). */
+    int userLenses;
+
+    /** The catalogue with the lenses added on the camera merged in. */
+    static Catalog load(Context ctx, UserLenses mine) {
+        Catalog c = load(ctx);
+        c.applyUser(mine == null ? new ArrayList<Lens>() : mine.all());
+        return c;
+    }
+
+    /**
+     * Replace the lenses added on the camera with these. Their brands join
+     * the catalogue's in alphabetical order (a typed brand that is a
+     * catalogue brand but for its case is spelt the catalogue's way, so the
+     * lens lists under it).
+     */
+    void applyUser(List<Lens> mine) {
+        if (seedBrands.isEmpty()) seedBrands.addAll(brands);
+        for (int i = lenses.size() - 1; i >= 0; i--) if (lenses.get(i).user) lenses.remove(i);
+        brands.clear();
+        brands.addAll(seedBrands);
+        userLenses = 0;
+        for (Lens l : mine) {
+            String b = brandNamed(l.brand);
+            if (b == null) {
+                b = l.brand;
+                int at = brands.size();
+                for (int i = 0; i < brands.size(); i++) {
+                    if (brands.get(i).compareToIgnoreCase(b) > 0) { at = i; break; }
+                }
+                brands.add(at, b);
+            }
+            l.brand = b;
+            l.user = true;
+            lenses.add(l);
+            userLenses++;
+        }
+    }
+
+    /** The catalogue's spelling of a brand typed in any case; null when it has none. */
+    String brandNamed(String name) {
+        if (name == null) return null;
+        for (String b : brands) if (b.equalsIgnoreCase(name)) return b;
+        return null;
+    }
+
+    /** Every mount the catalogue names, alphabetically, for the form's picker. */
+    List<String> mounts() {
+        List<String> out = new ArrayList<String>();
+        for (Lens l : lenses) {
+            if (l.mount == null || l.mount.length() == 0) continue;
+            boolean has = false;
+            for (String m : out) if (m.equalsIgnoreCase(l.mount)) { has = true; break; }
+            if (!has) out.add(l.mount);
+        }
+        java.util.Collections.sort(out, String.CASE_INSENSITIVE_ORDER);
+        return out;
+    }
 
     static Catalog load(Context ctx) {
         Catalog c = new Catalog();

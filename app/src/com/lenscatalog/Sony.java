@@ -98,13 +98,13 @@ final class Sony {
 
     /**
      * Simulator only (no Sony framework): an electronic lens is "mounted" when
-     * /AINTFILM/SIM/LENS.TXT on the card holds its name, so the electronic-lens
+     * /LENSCAT/SIM/LENS.TXT on the card holds its name, so the electronic-lens
      * screen and session can be tested off the camera. Never read on the camera.
      */
     private String simLensName() {
         try {
             java.io.File f = new java.io.File(android.os.Environment.getExternalStorageDirectory(),
-                    "AINTFILM/SIM/LENS.TXT");
+                    AppLog.DIR + "/SIM/LENS.TXT");
             if (!f.isFile() || f.length() > 256) return "";
             java.io.FileInputStream in = new java.io.FileInputStream(f);
             byte[] b = new byte[(int) f.length()];
@@ -487,7 +487,7 @@ final class Sony {
 
     String logText() { return log.toString(); }
 
-    // Through AppLog: the card's /AINTFILM/AINTFILM.LOG (what the camera can
+    // Through AppLog: the card's /LENSCAT/LENSCAT.LOG (what the camera can
     // tell us) and logcat (its sink).
     private void i(String s) {
         AppLog.i(s);

@@ -79,6 +79,16 @@ final class Store {
         p.edit().putString("lc_" + id, sb.toString()).commit();
     }
 
+    /** A lens that is gone (deleted from the user's own): out of the favourites, last used and its correction. */
+    void forget(String id) {
+        if (id == null) return;
+        if (isFavorite(id)) toggleFavorite(id);
+        SharedPreferences.Editor e = p.edit();
+        if (id.equals(lastUsed())) e.remove("last_used");
+        e.remove("lc_" + id);
+        e.commit();
+    }
+
     /** Whether the app exits automatically after Apply/Tag (default: true). */
     boolean autoExit() {
         return p.getBoolean("auto_exit", true);

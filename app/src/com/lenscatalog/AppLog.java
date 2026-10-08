@@ -8,10 +8,11 @@ import java.util.Locale;
 import java.util.TimeZone;
 
 /**
- * A log on the memory card (/AINTFILM/AINTFILM.LOG), so that what happened on a
- * camera nobody can attach a debugger to can be read on a computer afterwards.
- * Kept under 512 KB by rolling once to AINTFILM.OLD. Both names are 8.3 and
- * upper case: the camera's card takes no other kind.
+ * A log on the memory card (/LENSCAT/LENSCAT.LOG: the app's own folder, shared
+ * with no other app), so that what happened on a camera nobody can attach a
+ * debugger to can be read on a computer afterwards. Kept under 512 KB by
+ * rolling once to LENSCAT.OLD. Both names are 8.3 and upper case: the camera's
+ * card takes no other kind.
  *
  * Every line also goes to the {@link Sink} the activity installs (logcat), so
  * this class compiles and is tested on a bare JDK.
@@ -30,7 +31,8 @@ final class AppLog {
         void line(String msg);
     }
 
-    static final String NAME = "AINTFILM.LOG";
+    /** The app's folder on the card, and the log in it. */
+    static final String DIR = "LENSCAT", NAME = "LENSCAT.LOG", OLD = "LENSCAT.OLD";
     static volatile Sink sink;
     private static File file;
     private static final SimpleDateFormat TIME = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
@@ -48,7 +50,7 @@ final class AppLog {
         dir.mkdirs();
         file = new File(dir, NAME);
         if (file.length() > 512 * 1024) {
-            File old = new File(dir, "AINTFILM.OLD");
+            File old = new File(dir, OLD);
             old.delete();
             file.renameTo(old);
             file = new File(dir, NAME);

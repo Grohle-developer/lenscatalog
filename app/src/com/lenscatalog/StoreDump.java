@@ -5,7 +5,7 @@ import java.io.FileOutputStream;
 
 /**
  * The camera's settings store, written to the card as text
- * (/AINTFILM/STORE001.TXT, STORE002.TXT...: 8.3 names): one line a slot,
+ * (/LENSCAT/STORE001.TXT, STORE002.TXT...: 8.3 names): one line a slot,
  * "id size hex-bytes". Two dumps, one before and one after changing a single
  * setting in the camera's menu (SteadyShot Adjust: Manual, its focal length),
  * differ in the slot that holds it: how Recipe Lab and aintfilm-sony found
