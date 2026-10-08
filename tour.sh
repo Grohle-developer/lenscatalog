@@ -357,8 +357,9 @@ type_text() { # the keys of a text, a character at a time (several keys a call: 
   # (read on its own descriptor: adb shell, inside `key`, would swallow the lines left on stdin)
   while read -r -u 3 line; do KEYWAIT=0.7 key $line; done 3< <(keys_for "$1")
 }
-MYBRAND="Meyer-Optik"; MYMODEL="Oreston 50mm f/1.8"; MYMOUNT="M42"
-MYID="my-meyer-optik-oreston-50mm-f-1-8-m42"
+# (Meyer-Optik is a catalogue brand, so the lens files under it, last in its list; the brackets exercise the keyboard)
+MYBRAND="Meyer-Optik"; MYMODEL="Oreston 50mm f/1.8 (zebra)"; MYMOUNT="M42"
+MYID="my-meyer-optik-oreston-50mm-f-1-8-zebra-m42"
 MYFILE=$CARD/LENSCAT/MYLENSES.JSN
 APPFILE=/data/data/$PKG/files/mylenses.json
 start
@@ -382,9 +383,9 @@ check "the card's copy is the catalogue's format and holds the lens" python3 - "
 import json, sys
 d = json.loads(sys.argv[1])
 b = [x for x in d["brands"] if x["brand"] == "Meyer-Optik"]
-m = b[0]["models"][0]
-assert m["model"] == "Oreston 50mm f/1.8" and m["mount"] == "M42" and m["type"] == "prime"
-assert m["focal"] == 50 and abs(m["max_aperture"] - 1.8) < 1e-9 and m["id"] == "my-meyer-optik-oreston-50mm-f-1-8-m42"
+m = [x for x in b[0]["models"] if x["id"].startswith("my-")][0]
+assert m["model"] == "Oreston 50mm f/1.8 (zebra)" and m["mount"] == "M42" and m["type"] == "prime"
+assert m["focal"] == 50 and abs(m["max_aperture"] - 1.8) < 1e-9 and m["id"] == "my-meyer-optik-oreston-50mm-f-1-8-zebra-m42"
 PY
 check "the app's own copy exists" adb_ shell "ls $APPFILE" | grep -q mylenses.json
 key menu                                       # the result closes onto the brand's list
@@ -399,7 +400,7 @@ wait_log "tagger: done" 120 || true
 adb_ pull $DCIM/DSC00006.JPG "$OUT/photos/DSC00006.JPG" >/dev/null 2>&1
 if command -v exiftool >/dev/null; then
   check "DSC00006.JPG: LensMake and LensModel are the lens of your own" bash -c \
-    "exiftool -s -S -LensMake -LensModel -FocalLength -FNumber -n '$OUT/photos/DSC00006.JPG' | tr '\n' '|' | grep -qF 'Meyer-Optik|Meyer-Optik Oreston 50mm f/1.8|50|1.8|'"
+    "exiftool -s -S -LensMake -LensModel -FocalLength -FNumber -n '$OUT/photos/DSC00006.JPG' | tr '\n' '|' | grep -F 'Meyer-Optik|Meyer-Optik Oreston 50mm f/1.8 (zebra)|50|1.8|' >/dev/null"
 fi
 # a new card: the card's copy is gone; the app's carries the lens, and the card's is written again
 adb_ shell rm $MYFILE
@@ -424,7 +425,7 @@ PY
 downs=""; for _ in $(seq 1 $((MYIDX + 2))); do downs="$downs down"; done   # Favourites, then the brands
 key $downs
 shot 35-marca-en-catalogo
-key enter enter                                # its page
+key enter up enter                             # the brand's list; the lens of your own is its last model
 key down down down down down                   # Apply, correction, adjust, favourites, Edit, Delete
 key enter                                      # armed: "Delete? Press OK again"
 shot 36-borrar
@@ -449,7 +450,8 @@ check "the card listing has the photographs (the audit is not vacuous)" has_phot
 check "every name on the card is 8.3, upper case" test -z "$(not83)"
 not83 | sed 's/^/  NOT 8.3: /'
 check "the app writes nothing in aintfilm's folder (/AINTFILM)" test "$(adb_ shell "ls $CARD/AINTFILM >/dev/null 2>&1 && echo yes || echo no" | tr -d '\r')" = "no"
-log_has_start() { card_log | grep -q "LensCatalog start"; }
+# (grep without -q: with pipefail, a grep that quits early leaves adb a broken pipe and the check red)
+log_has_start() { card_log | grep "LensCatalog start" >/dev/null; }
 check "the log is the app's own: /LENSCAT/LENSCAT.LOG" log_has_start
 
 say "screens in $OUT/shots, photographs in $OUT/photos"
