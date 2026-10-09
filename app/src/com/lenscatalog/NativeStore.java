@@ -2,8 +2,8 @@ package com.lenscatalog;
 
 /**
  * JNI binding to the camera's settings store (liblcstore.so, jni/store/, the
- * same driver as aintfilm-sony's): one slot read or written at a time, then a
- * commit. The store is what the camera keeps through the app closing and a
+ * backup-service driver of OpenMemories-Platform, MIT): one slot read or
+ * written at a time, then a commit. The store is what the camera keeps through the app closing and a
  * power cycle; Camera.Parameters are not. Loaded on first use and only on a
  * camera: the simulator has no such library, and available() says so.
  * Nothing here throws.

@@ -1,5 +1,5 @@
-# ndk-build: liblcstore.so = the camera's settings store (store/, from aintfilm-sony
-# and OpenMemories-Platform, MIT): reading and writing the camera's own settings,
+# ndk-build: liblcstore.so = the camera's settings store (store/, the driver of
+# OpenMemories-Platform, MIT, (c) 2017 ma1co): reading and writing the camera's own settings,
 # which outlive the app (Camera.Parameters do not). Camera only: it links Sony's
 # libosal_uipc.so, which the simulator has not got. The stub built here is for the
 # linker; the APK carries liblcstore.so alone.

@@ -51,7 +51,7 @@ specific to that body, so it should work on the other cameras that support PMCA 
   camera framework lasts only while the app is open: on leaving, the body goes
   back to what its settings store holds. So Apply also writes SteadyShot
   Adjust: Manual and the focal length into that store (the same mechanism
-  aintfilm uses for its recipes), after a one-time **calibration**
+  Recipe Lab uses for its recipes), after a one-time **calibration**
   (*Diagnostics › Calibrate SteadyShot*): three snapshots of the store with
   the camera's menu set to Auto, Manual 50 mm and Manual 200 mm, from which
   the app finds the two slots your body uses. Until then the result card
@@ -119,7 +119,7 @@ specific to that body, so it should work on the other cameras that support PMCA 
 - Everything the app writes on the card lives in its own folder, `/LENSCAT`:
   the log (`LENSCAT.LOG`, also shown in *Tools › View log*; it rolls to
   `LENSCAT.OLD` at 512 KB), `MYLENSES.JSN`, and the settings-store dumps of
-  Diagnostics. All 8.3 upper-case names. Nothing is shared with aintfilm.
+  Diagnostics. All 8.3 upper-case names.
 
 ## Requirements
 

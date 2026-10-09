@@ -12,8 +12,8 @@ import java.util.TreeMap;
  *
  * What the app sets through CameraEx lives only while the app holds the
  * camera: on leaving, the body goes back to what its store says, and shoots
- * with that. So the focal length has to go into the store, as aintfilm's
- * recipes do. The store is thousands of numbered slots with no names; which
+ * with that. So the focal length has to go into the store, as Recipe Lab
+ * does with its recipes. The store is thousands of numbered slots with no names; which
  * two are SteadyShot's is not published for any body, and the A7 II research
  * found no rule that gives a slot from a menu item (Finder/Monitor is
  * 0x01070795 because the firmware says so). They are found on the camera

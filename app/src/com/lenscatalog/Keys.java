@@ -6,8 +6,8 @@ package com.lenscatalog;
  * ScalarInput codes); the Android key code is whatever the firmware put
  * there. The four-way and the centre arrive with the same scan codes on
  * both (103/105/106/108/232 are Linux's and Sony's alike). The control wheel
- * and the dials are Sony's own codes on the camera (the same ones aintfilm's
- * Sony app and Recipe Lab read); in the simulator the wheel is the volume
+ * and the dials are Sony's own codes on the camera (ScalarInput's); in the
+ * simulator the wheel is the volume
  * rocker or page up / down (sim.sh key wheel+ / wheel-). No android.*
  * import.
  */

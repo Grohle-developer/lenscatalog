@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """The slots that differ between two dumps of the camera's settings store
-(Diagnostics -> Dump camera settings: /AINTFILM/STORE001.TXT, STORE002.TXT...).
+(Diagnostics -> Dump camera settings: /LENSCAT/STORE001.TXT, STORE002.TXT...).
 Dump, change ONE setting in the camera's menu, dump again: the slots printed
 are the ones that setting lives in.
 

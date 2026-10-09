@@ -42,7 +42,7 @@ final class Screen {
                     String n = m.getName();
                     if (n.equals("hashCode")) return System.identityHashCode(self);
                     if (n.equals("equals")) return self == args[0];
-                    if (n.equals("toString")) return "aintfilm screen listener";
+                    if (n.equals("toString")) return "lenscatalog screen listener";
                     if (n.equals("onDeviceStatusChanged")) {
                         ui.execute(new Runnable() {
                             public void run() {
