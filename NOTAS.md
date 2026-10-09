@@ -601,3 +601,19 @@ almacén: ese era el fallo.
   versión los lleva de serie para la A7 II y la calibración queda para otros
   cuerpos.
 - En el simulador no hay almacén: la pantalla lo dice y el tour lo comprueba.
+
+### Limpieza de rastros de aintfilm en la app (2026-10-09)
+- La app ya no nombra a aintfilm en nada de lo que lleva el APK (comprobado
+  con `strings` sobre cada archivo del APK, sin distinguir mayúsculas: 0
+  líneas). La única cadena real era el nombre del *listener* de pantalla
+  (`Screen.java`, `toString` del proxy: ahora «lenscatalog screen listener»).
+- Comentarios del código fuente y de `jni/` reescritos: el driver del almacén
+  se atribuye a OpenMemories-Platform (MIT, (c) 2017 ma1co), que es de donde
+  viene de verdad y lo que la licencia exige conservar; lo demás cita a
+  Recipe Lab donde antes citaba a aintfilm.
+- `app/tools/store-diff.py` decía que los volcados iban a `/AINTFILM/`: desde
+  la 0.4.0 van a `/LENSCAT/`.
+- Se queda, a propósito: el tour (`tour.sh`) y su párrafo en el README, que
+  corren sobre el simulador de la A7 II de aintfilm-sony (dependencia real de
+  la herramienta de pruebas, no de la app) y comprueban que la app no escribe
+  en `/AINTFILM`; y estas notas, que cuentan la historia como fue.

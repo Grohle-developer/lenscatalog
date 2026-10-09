@@ -8,8 +8,7 @@ import java.io.FileOutputStream;
  * (/LENSCAT/STORE001.TXT, STORE002.TXT...: 8.3 names): one line a slot,
  * "id size hex-bytes". Two dumps, one before and one after changing a single
  * setting in the camera's menu (SteadyShot Adjust: Manual, its focal length),
- * differ in the slot that holds it: how Recipe Lab and aintfilm-sony found
- * theirs. Reading only; nothing is written to the store. Slots are
+ * differ in the slot that holds it: how Recipe Lab found its own. Reading only; nothing is written to the store. Slots are
  * 0xSSSSIIII; subsystems 0x0100-0x010F, ids 0x000-0xFFF are walked.
  */
 final class StoreDump {
