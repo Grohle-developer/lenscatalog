@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Host tests of the pure-Java parts: the on-screen keyboard's model (Keyboard)
-# and UserLenses' cleaning and ids. javac against the Android platform jar
+# Host tests of the pure-Java parts: the on-screen keyboard's model (Keyboard),
+# UserLenses' cleaning and ids, and the SteadyShot store calibration (IbisSlots). javac against the Android platform jar
 # (for the types the classes mention; nothing of Android runs here).
 #
 #   JAVA_HOME  ANDROID_SDK  PLATFORM_JAR   as app/build.sh
@@ -15,5 +15,6 @@ JAVAC="${JAVA_HOME:+$JAVA_HOME/bin/}javac"
 JAVA="${JAVA_HOME:+$JAVA_HOME/bin/}java"
 "$JAVAC" -encoding UTF-8 --release 8 -Xlint:-options -nowarn -cp "$PLATFORM_JAR" -d "$OUT/classes" \
   src/com/lenscatalog/Keyboard.java src/com/lenscatalog/UserLenses.java src/com/lenscatalog/Catalog.java \
-  src/com/lenscatalog/AppLog.java test/KeyboardTest.java
+  src/com/lenscatalog/AppLog.java src/com/lenscatalog/IbisSlots.java test/KeyboardTest.java test/IbisSlotsTest.java
 "$JAVA" -cp "$OUT/classes:$PLATFORM_JAR" com.lenscatalog.KeyboardTest
+"$JAVA" -cp "$OUT/classes:$PLATFORM_JAR" com.lenscatalog.IbisSlotsTest

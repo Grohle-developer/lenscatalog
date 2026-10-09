@@ -89,6 +89,27 @@ final class Store {
         e.commit();
     }
 
+    // ------------------------------------------------ SteadyShot in the camera's store
+    /** The calibration (IbisSlots.Calibration.encode), or null. */
+    String ibisCalibration() {
+        return p.getString("ibis_cal", null);
+    }
+
+    void setIbisCalibration(String encoded) {
+        SharedPreferences.Editor e = p.edit();
+        if (encoded == null) e.remove("ibis_cal"); else e.putString("ibis_cal", encoded);
+        e.commit();
+    }
+
+    /** How many of the calibration's three snapshots are taken (0-3); the app is left and relaunched between them. */
+    int ibisCalStep() {
+        return p.getInt("ibis_cal_step", 0);
+    }
+
+    void setIbisCalStep(int step) {
+        p.edit().putInt("ibis_cal_step", step).commit();
+    }
+
     /** Whether the app exits automatically after Apply/Tag (default: true). */
     boolean autoExit() {
         return p.getBoolean("auto_exit", true);

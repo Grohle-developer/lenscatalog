@@ -235,6 +235,11 @@ shot 16-favoritos
 key enter menu menu                         # open it from there, back, back
 key up up up up enter
 shot 17-diagnostico
+key enter                                   # Calibrate SteadyShot: the first row
+shot 37-calibrar-steadyshot
+key enter                                   # record a step: the simulator has no settings store
+check "SteadyShot calibration: the simulator has no store, and says so" logged "SteadyShot calibration: no settings store (simulator)"
+key menu menu                               # the card, then the calibration screen: back to Diagnostics
 key menu down enter
 shot 18-registro
 
